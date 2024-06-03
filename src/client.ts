@@ -1,5 +1,8 @@
 
 import { ESCAPADE_API } from './data/consts.js'
+import { Friend } from './types/friend.js'
+import { Profile } from './types/profile.js'
+import { WorldMeta } from './types/world-meta.js'
 
 export class EscapadeClient {
     #token: string
@@ -11,12 +14,22 @@ export class EscapadeClient {
     /**
      * 
      */
-    async get<Profile>(endpoint: 'me'): Promise<Profile>
+    async get<T extends Profile<boolean>>(endpoint: 'me'): Promise<T>
 
     /**
      * 
      */
-    async get<WorldMeta>(endpoint: 'worlds'): Promise<WorldMeta>
+    async get<T extends { invites_received: Friend[], friends: Friend[], invites_sent: Friend[] }>(endpoint: 'me/friends'): Promise<T>
+
+    /**
+     * 
+     */
+    async get<T extends WorldMeta>(endpoint: 'me/worlds'): Promise<T>
+
+    /**
+     * 
+     */
+    async get<T extends WorldMeta>(endpoint: 'worlds'): Promise<T>
 
     /**
      * 
@@ -45,6 +58,9 @@ export class EscapadeClient {
         return JSON.parse(text)
     }
 
+    /**
+     * 
+     */
     private async try_refresh_token() {
         const response = await fetch(`${ESCAPADE_API}/auth/refresh`, {
             method: 'POST',
@@ -69,7 +85,23 @@ export class EscapadeClient {
         }
     }
 
+    // TODO "POST", "/me/friends/accept"
+    // TODO "POST", "/me/friends/reject"
+    // TODO "POST", "/me/friends/cancel"
+    // TODO "DELETE", "/me/friends"
+    // TODO "GET", "/players/search?name=" + s
+    // TODO "POST", "/me/friends/add
+    // TODO "GET", "/me/worlds/completed"
+    // TODO "GET", "/campaigns"
+    // TODO "GET", "/worlds/featured"
+    // TODO "GET", "/campaigns"
+    // TODO "GET", "/shop/" read with function "bo" for extended paths
+    // TODO POST", "/shop"
 
+    // TODO GET 'shop/smileys'
+    // TODO GET 'shop/aura/shapes'
+    // TODO GET 'shop/aura/colors'
+    // TODO GET 'shop/worlds'
 
     
 
