@@ -5,7 +5,6 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build-protocol": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:./src/data/protocol.js --grpc_out=./src/data/protocol.js src/protocol.proto",
     "build": "tsc && cp src/data/protocol.proto dist/data/protocol.proto",
     "docs": "npx typedoc src",
     "test": "jest --verbose ./test"
@@ -14,14 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^20.12.7",
-    "pocketbase": "^0.21.1",
-    "protocol-buffers": "^5.0.0",
+    "protobufjs": "^7.3.0",
     "ws": "^8.17.0",
     "yaml": "^2.4.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.1",
+    "@types/protobufjs": "^6.0.0",
     "@types/ws": "^8.5.10",
     "jest": "^29.7.0",
     "typedoc": "^0.25.13"

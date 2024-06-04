@@ -8,51 +8,57 @@ import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
 
-export class EscapadeClient {
+export class EscapadeClient<Ready extends boolean> {
+    #socket: WebSocket | undefined
+
     #token: string
-    #socket: WebSocket
 
     constructor(args: { token: string }) {
         this.#token = args.token
-
-        this.#socket = new WebSocket(SOCKET_URL)
-        this.#socket.binaryType = 'arraybuffer'
     }
 
     /**
-     * Is truthy, if the client is connected.
+     * Is truthy, if the client socket is connected.
      */
-    get connected(): boolean {
-        return this.#socket.readyState == this.#socket.OPEN
+    public connected(): this is EscapadeClient<true> {
+        return this.#socket !== undefined && this.#socket.readyState === this.#socket.OPEN
     }
 
     /**
-     * The compiled protocol for Escapade
+     * In environments, which is type guarded as connected,
+     * retrieve the socket safely.
+     */
+    private socket(this: EscapadeClient<true>): WebSocket {
+        return this.#socket as WebSocket
+    }
+
+    /**
+     * @todo The compiled protocol for Escapade
      */
     static protocol: typeof PROTOCOL = PROTOCOL
 
     /**
-     * 
+     * @todo
      */
     async get<T extends Profile<boolean>>(endpoint: 'me'): Promise<T>
 
     /**
-     * 
+     * @todo
      */
     async get<T extends { invites_received: Friend[], friends: Friend[], invites_sent: Friend[] }>(endpoint: 'me/friends'): Promise<T>
 
     /**
-     * 
+     * @todo
      */
     async get<T extends WorldMeta>(endpoint: 'me/worlds'): Promise<T>
 
     /**
-     * 
+     * @todo
      */
     async get<T extends WorldMeta>(endpoint: 'worlds'): Promise<T>
 
     /**
-     * 
+     * @todo
      */
     async get(endpoint: string): Promise<any>
 
@@ -79,7 +85,7 @@ export class EscapadeClient {
     }
 
     /**
-     * 
+     * @todo
      */
     private async try_refresh_token() {
         const response = await fetch(`${ESCAPADE_API}/auth/refresh`, {
@@ -123,25 +129,47 @@ export class EscapadeClient {
     // TODO GET 'shop/aura/colors'
     // TODO GET 'shop/worlds'
 
-    async connect(world_id: string) {
+    /**
+     * @todo
+     */
+    public send(this: EscapadeClient<true>, message_type: string, payload: any): true {
+        if (!this.connected()) throw new Error('Socket is not connected!')
+        const Message = EscapadeClient.protocol.lookupType(message_type)
+        const err = Message.verify(payload)
+        if (err) throw new Error(err)
+        const data = Message.create(payload)
+        const buffer = Message.encode(data).finish()
+        this.socket().send(buffer)
+        return true
+    }
+
+    /**
+     * @todo
+     */
+    public async connect(world_id: string) {
+        await this.try_refresh_token()
+
+        this.#socket = new WebSocket(SOCKET_URL)
+        this.#socket.binaryType = 'arraybuffer'
+
         this.#socket.on('open', async () => {
             console.log('Opened')
             // TODO search for WebSocket → I2　→ x2(, transform token and world id with .uint32
 
-            console.log({
+            return this.send('JoinWorld', {
                 worldId: world_id,
                 authToken: this.#token
             })
 
-            console.log(EscapadeClient.protocol['JoinWorld'].encode({
-                worldId: world_id,
-                authToken: this.#token
-            }))
+            // console.log(EscapadeClient.protocol['JoinWorld'].encode({
+            //     worldId: world_id,
+            //     authToken: this.#token
+            // }))
 
-            return this.#socket?.send(EscapadeClient.protocol['JoinWorld'].encode({
-                worldId: world_id,
-                authToken: this.#token
-            }))
+            // return this.#socket?.send(EscapadeClient.protocol['JoinWorld'].encode({
+            //     worldId: world_id,
+            //     authToken: this.#token
+            // }))
             
         })
 
@@ -154,9 +182,11 @@ export class EscapadeClient {
         })
 
         this.#socket.on('error', async (ev) => {
-            console.log('error', ev)
+            throw ev
         })
     }
+
+
 
 
 

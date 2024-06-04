@@ -1,11 +1,10 @@
 import fs from 'fs'
-import ProtoBuf from 'protocol-buffers'
+import protobuf from 'protobufjs'
 
-const raw_protocol = fs.readFileSync(import.meta.dirname + '/protocol.proto')
-export const PROTOCOL = ProtoBuf(raw_protocol)
+export const PROTOCOL = protobuf.loadSync(import.meta.dirname + '/protocol.proto')
 
-const PROTOCOL_TYPE = 'export declare const PROTOCOL: {\n'
-    + Object.keys(PROTOCOL).map(k => `\t["${k}"]: any`).join('\n')
-    + '\n}'
+// const PROTOCOL_TYPE = 'export declare const PROTOCOL: {\n'
+//     + Object.keys(PROTOCOL).map(k => `\t["${k}"]: any`).join('\n')
+//     + '\n}'
 
-fs.writeFileSync(import.meta.dirname + '/protocol.d.ts', PROTOCOL_TYPE)
+// fs.writeFileSync(import.meta.dirname + '/protocol.d.ts', PROTOCOL_TYPE)
