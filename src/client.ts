@@ -1,15 +1,35 @@
 
-import { ESCAPADE_API } from './data/consts.js'
+import WebSocket from 'ws'
+
+import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
+import { PROTOCOL } from './data/protocol.js'
+
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
 
 export class EscapadeClient {
     #token: string
+    #socket: WebSocket
 
     constructor(args: { token: string }) {
         this.#token = args.token
+
+        this.#socket = new WebSocket(SOCKET_URL)
+        this.#socket.binaryType = 'arraybuffer'
     }
+
+    /**
+     * Is truthy, if the client is connected.
+     */
+    get connected(): boolean {
+        return this.#socket.readyState == this.#socket.OPEN
+    }
+
+    /**
+     * The compiled protocol for Escapade
+     */
+    static protocol: typeof PROTOCOL = PROTOCOL
 
     /**
      * 
@@ -103,7 +123,47 @@ export class EscapadeClient {
     // TODO GET 'shop/aura/colors'
     // TODO GET 'shop/worlds'
 
-    
+    async connect(world_id: string) {
+        this.#socket.on('open', async () => {
+            console.log('Opened')
+            // TODO search for WebSocket → I2　→ x2(, transform token and world id with .uint32
+
+            console.log({
+                worldId: world_id,
+                authToken: this.#token
+            })
+
+            console.log(EscapadeClient.protocol['JoinWorld'].encode({
+                worldId: world_id,
+                authToken: this.#token
+            }))
+
+            return this.#socket?.send(EscapadeClient.protocol['JoinWorld'].encode({
+                worldId: world_id,
+                authToken: this.#token
+            }))
+            
+        })
+
+        this.#socket.on('message', async (ev) => {
+            console.log('message', ev)
+        })
+
+        this.#socket.on('close', async (code, reason) => {
+            console.log('close', code, reason.toString('ascii'))
+        })
+
+        this.#socket.on('error', async (ev) => {
+            console.log('error', ev)
+        })
+    }
+
+
+
+
+
+
+
 
     async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
 

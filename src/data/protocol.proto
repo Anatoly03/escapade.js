@@ -1,0 +1,378 @@
+// This file is authored by the core Escapade developers
+// This file is shared under the GNU General Public License v3.0
+
+syntax = "proto3";
+
+package protocol;
+option go_package = "./protocol";
+
+
+message JoinWorld {
+  string auth_token = 1;
+  string world_id = 2;
+}
+
+enum WorldEventType {
+  // Init seq
+  Init = 0;
+  Sync = 1;
+
+  // World Events
+  WorldInfoUpdate = 10;
+  Notification = 11;
+  WorldReset = 12;
+  Block = 13;
+
+  // Player Events
+  Add = 20;
+  Leave = 21;
+  PlayerReset = 22;
+  Chat = 23;
+  SmileyChange = 24;
+  AuraChange = 25;
+  CanEditChange = 26;
+  CanUseGodModeChange = 27;
+
+  // Movement
+  Move = 40;
+  MoveUpdate = 41;
+  Death = 42;
+  SetRespawnPoint = 43;
+  Respawn = 44;
+
+  // Block Touching
+  MapEnablerTouch = 50;
+  GodModeEnablerTouch = 51;
+  TrophyTouch = 52;
+  CoinCollect = 53;
+  KeyTouch = 54;
+  CrownTouch = 55;
+  PurpleSwitchTouch = 56;
+  OrangeSwitchTouch = 57;
+  CheckpointTouch = 58;
+  EffectTouch = 59;
+  PlayerTouch = 60;
+  TeamChange = 61;
+}
+
+message WorldEvent {
+  WorldEventType event_type = 1;
+  uint32 issuer_local_player_id = 2;
+  oneof event_args {
+    // Init seq
+    InitArgs init_args = 10;
+
+    // World Events
+    WorldInfo world_info_args = 20;
+    NotificationArgs notification_args = 21;
+    WorldResetArgs world_reset_args = 22;
+    BlockArgs block_args = 23;
+
+    // Player events
+    PlayerInfo add_args = 30;
+    PlayerResetArgs player_reset_args = 31;
+    ChatArgs chat_args = 32;
+    SmileyChangeArgs smiley_change_args = 33;
+    AuraChangeArgs aura_change_args = 34;
+    CanEditChangeArgs can_edit_args = 35;
+    CanUseGodModeChangeArgs can_use_god_mode_args = 36;
+
+    // Movement
+    MoveArgs move_args = 50;
+    DeathArgs death_args = 51;
+    Vector2U set_respawn_point_args = 52;
+    RespawnArgs respawn_args = 53;
+
+    // Block touching
+    BlockTouchArgs block_touch_args = 60;
+    CoinCollectArgs coin_collect_args = 61;
+    KeyTouchArgs key_touch_args = 62;
+    SwitchTouchArgs switch_touch_args = 63;
+    EffectTouchArgs effect_touch_args = 64;
+    PlayerTouchArgs player_touch_args = 65;
+    TeamChangeArgs team_change_args = 66;
+  }
+}
+
+enum WorldPerm {
+  PermPlayer = 0;
+  PermEdit = 1;
+  PermCommands = 2;
+  PermOwner = 3;
+}
+
+message InitArgs {
+  int64 current_time = 1;
+  WorldInfo world = 2;
+  PlayerInfo me = 3;
+  repeated PlayerInfo players = 4;
+  uint32  crowned_player_id = 5;
+  repeated KeyState key_states = 6;
+  repeated uint32 enabled_orange_switches = 7;
+}
+
+enum WorldInfoFields {
+  _ = 0;
+  Title = 1;
+  Map = 2;
+}
+
+message WorldInfo {
+  uint32 width = 1;
+  uint32 height = 2;
+  bytes deflated_world_data = 3;
+  string owner_id = 4;
+  string owner_name = 5;
+  WorldInfoFields updated_fields = 6;
+  string world_title = 7;
+  bool map_hidden = 8;
+}
+
+message WorldResetArgs {
+  bytes deflated_world_data = 1;
+  Vector2U respawn_point = 2;
+}
+
+message WorldData {
+  repeated BlockEntry block_entries = 1;
+}
+
+enum BlockLayer {
+  LayerSolid = 0;
+  LayerBackground = 1;
+}
+
+message BlockEntry {
+  bytes xs = 1;
+  bytes ys = 2;
+  uint32 block_id = 3;
+  BlockLayer layer = 4;
+  repeated int32 int_args = 5;
+  repeated string string_args = 6;
+}
+
+message PlayerInfo {
+  uint32 local_player_id = 1;
+  string player_id = 2;
+  string name = 3;
+
+  uint32 smiley_id = 4;
+  uint32 aura_shape_id = 5;
+  uint32 aura_color_id = 6;
+
+  bool is_ready = 7;
+  int64 last_position_update = 8;
+  PlayerState play_state = 9;
+
+  WorldPerm perm_level = 10;
+  bool can_edit = 11;
+}
+
+message PlayerResetArgs {
+  Vector2U respawn_point = 1;
+  uint32 target_local_player_id = 2;
+}
+
+message PlayerState {
+  MoveArgs move_args = 1;
+  Vector2U respawn_point = 2;
+  bool completed_level = 3;
+  bool map_unlocked = 4;
+  bool god_mode_unlocked = 5;
+  uint32 deaths = 6;
+  repeated CoinState coin_states = 7;
+  repeated uint32 enabled_purple_switches = 8;
+  repeated EffectState effects = 9;
+  Team team = 10;
+}
+
+message CanUseGodModeChangeArgs {
+  bool can_use_god_mode = 1;
+}
+
+message CanEditChangeArgs {
+  bool can_edit = 1;
+}
+
+message MoveArgs {
+  int32 tick_delta = 1;
+  int32 seed = 2;
+  Vector2D position = 3;
+  Vector2I direction = 4;
+  Vector2D velocity = 5;
+  bool is_jumping = 6;
+  bool is_god = 7;
+}
+
+message Vector2U {
+  uint32 x = 1;
+  uint32 y = 2;
+}
+
+message Vector2I {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message Vector2D {
+  double x = 1;
+  double y = 2;
+}
+
+message SmileyChangeArgs {
+  uint32 smiley_id = 1;
+}
+
+message AuraChangeArgs {
+  uint32 aura_shape_id = 1;
+  uint32 aura_color_id = 2;
+}
+
+message ChatArgs {
+  string message = 1;
+  bool is_private = 2;
+  uint32 target_local_player_id = 3;
+}
+
+message NotificationArgs {
+  string message = 1;
+}
+
+message BlockArgs {
+  uint32 x = 1;
+  uint32 y = 2;
+  uint32 block_id = 3;
+  BlockLayer layer = 4;
+  repeated int32 int_args = 5;
+  repeated string string_args = 6;
+}
+
+message DeathArgs {
+  int32 tick_delta = 1;
+  uint32 count = 2;
+}
+
+message RespawnArgs {
+  int32 tick_delta = 1;
+  Vector2D position = 2;
+}
+
+enum CoinType {
+  CoinGold = 0;
+  CoinBlue = 1;
+}
+
+message CoinState {
+  CoinType coin_type = 1;
+  uint32 coin_amount = 2;
+  repeated Vector2U collected_coins_positions = 3;
+}
+
+message CoinCollectArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  CoinType coin_type = 4;
+  bool discard = 5;
+  uint32 coin_amount = 6;
+}
+
+enum KeyType {
+  KeyRed = 0;
+  KeyGreen = 1;
+  KeyBlue = 2;
+  KeyMagenta = 3;
+  KeyYellow = 4;
+  KeyCyan = 5;
+}
+
+message KeyState {
+  KeyType key_type = 1;
+  int64 last_activation = 2;
+  uint32 duration = 3;
+}
+
+message KeyTouchArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  KeyType key_type = 4;
+  uint32 duration = 5;
+}
+
+message BlockTouchArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+}
+
+message SmileyChangingBlockTouchArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  uint32 smiley_id = 4;
+}
+
+message SwitchTouchArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  uint32 switch_id = 4;
+  bool enabled = 5;
+}
+
+enum EffectType {
+  None = 0;
+  Jump = 1;
+  Speed = 2;
+  Gravity = 3;
+  Levitation = 4;
+  MultiJump = 5;
+  GravityDirection = 6;
+  OnFire = 7;
+  Invulnerability = 8;
+  Poison = 9;
+  Zombie = 10;
+  Curse = 11;
+}
+
+message EffectState {
+  EffectType effect = 1;
+  int32 int_arg = 2;
+  int64 time_activated = 3;
+}
+
+message EffectTouchArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  EffectType effect = 4;
+  bool enable = 5;
+  int32 int_arg = 6;
+}
+
+message PlayerTouchArgs {
+  int32 tick_delta = 1;
+  uint32 local_player_id = 2;
+  bool zombie = 3;
+  bool curse = 4;
+  int64 time_activated = 5;
+  uint32 duration = 6;
+}
+
+enum Team {
+  TeamNone = 0;
+  TeamRed = 1;
+  TeamGreen = 2;
+  TeamBlue = 3;
+  TeamMagenta = 4;
+  TeamYellow = 5;
+  TeamCyan = 6;
+}
+
+message TeamChangeArgs {
+  int32 tick_delta = 1;
+  uint32 x = 2;
+  uint32 y = 3;
+  Team team = 4;
+}
