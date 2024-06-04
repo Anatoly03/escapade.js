@@ -5,6 +5,20 @@ export const PROTOCOL = protobuf.loadSync(import.meta.dirname + '/protocol.proto
 export const ProtocolEvents: { [keys: string]: { [fields: string]: string } } = {}
 const Enums: any = {}
 
+// <Util>
+
+function convert_to_js_type(s: string) {
+    if (s == 'bool')
+        return 'boolean'
+    else if (s == 'bytes')
+        return 'Buffer'
+    else if (/u?int(8|16|32|64|128)/.test(s) || s == 'double' || s == 'float')
+        return 'number'
+    return s
+}
+
+// </Util>
+
 // <Generate Protocol Events>
 
 for (const key in PROTOCOL.nested?.protocol) {
@@ -14,7 +28,7 @@ for (const key in PROTOCOL.nested?.protocol) {
         ProtocolEvents[key] = {}
 
         for (const field in value.fields) {
-            ProtocolEvents[key][field] = value.fields[field].type
+            ProtocolEvents[key][field] = convert_to_js_type(value.fields[field].type)
         }
     }
 }
@@ -32,8 +46,6 @@ for (const key in PROTOCOL.nested?.protocol) {
 
         Enums[key] = {}
 
-        console.log(key, value)
-
         for (const field in value) {
             if (Number.isInteger(parseInt(field))) continue
             console.log(field, value[field])
@@ -44,14 +56,21 @@ for (const key in PROTOCOL.nested?.protocol) {
 
 // </Generate Protocol Enums>
 
-function message_types(): string {
+function protocol_events(): string {
     return '{\n' + Object
         .keys(ProtocolEvents)
-        .map(event => `\t${event}: {\n${Object
-            .keys(ProtocolEvents[event])
-            .map(field => `\t\t${field}: ${ProtocolEvents[event][field]},`)
-            .join('\n')}\n\t},`)
+        .map(event => `\t${event}: ${event}`)
         .join('\n') + '\n}'
+}
+
+function message_types(): string {
+    return Object
+        .keys(ProtocolEvents)
+        .map(event => `export type ${event} = {\n${Object
+            .keys(ProtocolEvents[event])
+            .map(field => `\t${field}: ${ProtocolEvents[event][field]},`)
+            .join('\n')}\n}`)
+        .join('\n\n')
 }
 
 function enums(): string {
@@ -60,8 +79,8 @@ function enums(): string {
         .map(en => `export enum ${en} {\n${Object
             .keys(Enums[en])
             .map(field => `\t${field} = ${Enums[en][field]},`)
-            .join('\n')}\n}\n`)
-        .join('\n') 
+            .join('\n')}\n}`)
+        .join('\n\n') 
 }
 
 fs.writeFileSync(import.meta.dirname + '/protocol.d.ts', `
@@ -70,5 +89,7 @@ export declare const PROTOCOL: protobuf.Root
 
 ${enums()}
 
-export declare const ProtocolEvents: ${message_types()}
+${message_types()}
+
+export declare const ProtocolEvents: ${protocol_events()}
 `)

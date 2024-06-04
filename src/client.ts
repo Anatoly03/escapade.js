@@ -2,7 +2,7 @@
 import WebSocket from 'ws'
 
 import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
-import { PROTOCOL } from './data/protocol.js'
+import { PROTOCOL, ProtocolEvents } from './data/protocol.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
@@ -132,9 +132,9 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send(this: EscapadeClient<true>, message_type: string, payload: any): void {
+    public send<K extends keyof typeof ProtocolEvents>(this: EscapadeClient<true>, message_type: K, payload: typeof ProtocolEvents[K]): void {
         if (!this.connected()) throw new Error('Socket is not connected!')
-        const Message = EscapadeClient.protocol.lookupType(message_type)
+        const Message = EscapadeClient.protocol.lookupType(message_type as string)
 
         const err = Message.verify(payload)
         if (err) throw new Error(err)
