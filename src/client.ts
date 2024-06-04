@@ -132,15 +132,16 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send(this: EscapadeClient<true>, message_type: string, payload: any): true {
+    public send(this: EscapadeClient<true>, message_type: string, payload: any): void {
         if (!this.connected()) throw new Error('Socket is not connected!')
         const Message = EscapadeClient.protocol.lookupType(message_type)
+
         const err = Message.verify(payload)
         if (err) throw new Error(err)
+
         const data = Message.create(payload)
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
-        return true
     }
 
     /**
@@ -154,23 +155,11 @@ export class EscapadeClient<Ready extends boolean> {
 
         this.#socket.on('open', async () => {
             console.log('Opened')
-            // TODO search for WebSocket → I2　→ x2(, transform token and world id with .uint32
 
             return this.send('JoinWorld', {
                 worldId: world_id,
                 authToken: this.#token
-            })
-
-            // console.log(EscapadeClient.protocol['JoinWorld'].encode({
-            //     worldId: world_id,
-            //     authToken: this.#token
-            // }))
-
-            // return this.#socket?.send(EscapadeClient.protocol['JoinWorld'].encode({
-            //     worldId: world_id,
-            //     authToken: this.#token
-            // }))
-            
+            }) 
         })
 
         this.#socket.on('message', async (ev) => {
