@@ -3,20 +3,24 @@ import WebSocket from 'ws'
 import { EventEmitter } from 'events'
 
 import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
-import { PROTOCOL, ProtocolEvents } from './data/protocol.js'
+import { PROTOCOL } from './data/protocol.js'
+
+import * as ProtocolEvents from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, JoinWorld, WorldEventMatch } from './data/protocol.g.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
 
 interface CustomEvents {
+    '*': any[],
     'error': [Error],
     'close': [string]
 }
 
 export class EscapadeClient<Ready extends boolean> {
     #socket: WebSocket | undefined
-    #events: EventEmitter<CustomEvents & { [key in (keyof typeof ProtocolEvents)]: [(typeof ProtocolEvents)[key]] }>
+    #events: EventEmitter<Omit<{ [key in keyof WorldEvent]: [WorldEvent[key]] }, keyof CustomEvents> & CustomEvents>
     #token: string
 
     constructor(args: { token: string }) {
@@ -139,21 +143,6 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send<K extends keyof typeof ProtocolEvents>(this: EscapadeClient<true>, message_type: K, payload: typeof ProtocolEvents[K]): void {
-        if (!this.connected()) throw new Error('Socket is not connected!')
-        const Message = EscapadeClient.protocol.lookupType(message_type as string)
-
-        const err = Message.verify(payload)
-        if (err) throw new Error(err)
-
-        const data = Message.create(payload)
-        const buffer = Message.encode(data).finish()
-        this.socket().send(buffer)
-    }
-
-    /**
-     * @todo
-     */
     public async connect(world_id: string) {
         await this.try_refresh_token()
 
@@ -161,10 +150,11 @@ export class EscapadeClient<Ready extends boolean> {
         this.#socket.binaryType = 'arraybuffer'
 
         this.#socket.on('open', async () => {
-            this.send('JoinWorld', {
+            this.send('JoinWorld' as any, {
                 worldId: world_id,
                 authToken: this.#token
             })
+
             console.log('Opened')
         })
 
@@ -188,8 +178,38 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public on<K extends (keyof typeof ProtocolEvents | '*')>(message_type: K, listener: (args: K extends '*' ? any : typeof ProtocolEvents[K]) => any) {
-        return this.#events.on(message_type, listener as any)
+    public send(message_type: 'JoinWorld', args: JoinWorld): any;
+
+    /**
+     * @todo
+     */
+    public send<EventId extends keyof WorldEventType>(message_type: EventId, args: Partial<WorldEventMatch[EventId]>): any;
+
+    public send<K extends keyof typeof ProtocolEvents>(this: EscapadeClient<true>, message_type: K, payload: typeof ProtocolEvents[K]): void {
+        if (!this.connected()) throw new Error('Socket is not connected!')
+        const Message = EscapadeClient.protocol.lookupType(message_type as string)
+
+        const err = Message.verify(payload)
+        if (err) throw new Error(err)
+
+        const data = Message.create(payload)
+        const buffer = Message.encode(data).finish()
+        this.socket().send(buffer)
+    }
+
+    /**
+     * @todo
+     */
+    public on<EventId extends keyof WorldEventType>(message_type: EventId, listener: (args: WorldEvent[EventId]) => any): this;
+
+    /**
+     * @todo
+     */
+    public on<EventId extends keyof CustomEvents>(message_type: EventId, listener: (args: CustomEvents[EventId]) => any): this;
+
+    public on(message_type: any, listener: (args: any) => any) {
+        this.#events.on(message_type, listener)
+        return this
     }
 
 

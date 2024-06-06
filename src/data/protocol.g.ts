@@ -9,11 +9,24 @@ export type JoinWorld = {
 	worldId: string
 }
 
-export enum WorldEventType {
-	Init = 0,
+export type WorldEventType = {
+	Chat: 23,
 }
 
-export type WorldEvent<T> = {
-	eventType: WorldEventType
-	issuerLocalPlayerId: number
+export type WorldEvent = {
+    Chat: {
+        eventType: number
+        issuerLocalPlayerId: number
+        chatArgs: ChatArgs
+    }
+}
+
+export type ChatArgs = {
+	message: string
+	isPrivate: boolean
+	targetLocalPlayerId: number
+}
+
+export type WorldEventMatch = {
+    Chat: ChatArgs
 }
