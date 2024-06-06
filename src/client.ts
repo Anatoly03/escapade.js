@@ -1,5 +1,6 @@
 
 import WebSocket from 'ws'
+import { EventEmitter } from 'events'
 
 import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
 import { PROTOCOL, ProtocolEvents } from './data/protocol.js'
@@ -8,13 +9,19 @@ import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
 
+interface CustomEvents {
+    'error': [Error],
+    'close': [string]
+}
+
 export class EscapadeClient<Ready extends boolean> {
     #socket: WebSocket | undefined
-
+    #events: EventEmitter<CustomEvents & { [key in (keyof typeof ProtocolEvents)]: [(typeof ProtocolEvents)[key]] }>
     #token: string
 
     constructor(args: { token: string }) {
         this.#token = args.token
+        this.#events = new EventEmitter()
     }
 
     /**
@@ -50,12 +57,12 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    async get<T extends WorldMeta>(endpoint: 'me/worlds'): Promise<T>
+    async get<T extends WorldMeta[]>(endpoint: 'me/worlds'): Promise<T>
 
     /**
      * @todo
      */
-    async get<T extends WorldMeta>(endpoint: 'worlds'): Promise<T>
+    async get<T extends WorldMeta[]>(endpoint: 'worlds'): Promise<T>
 
     /**
      * @todo
@@ -154,27 +161,36 @@ export class EscapadeClient<Ready extends boolean> {
         this.#socket.binaryType = 'arraybuffer'
 
         this.#socket.on('open', async () => {
-            console.log('Opened')
-
-            return this.send('JoinWorld', {
+            this.send('JoinWorld', {
                 worldId: world_id,
                 authToken: this.#token
-            }) 
+            })
+            console.log('Opened')
         })
 
         this.#socket.on('message', async (ev) => {
-            console.log('message', ev)
+            const Event = EscapadeClient.protocol.lookupType('WorldEvent')
+            const buffer = new Uint8Array(ev as ArrayBuffer)
+            const data = Event.decode(buffer)
+
+            this.#events.emit('*', data as any)
         })
 
         this.#socket.on('close', async (code, reason) => {
-            console.log('close', code, reason.toString('ascii'))
+            this.#events.emit<'close'>('close', reason.toString('ascii'))
         })
 
-        this.#socket.on('error', async (ev) => {
-            throw ev
+        this.#socket.on('error', async (err) => {
+            this.#events.emit<'error'>('error', err)
         })
     }
 
+    /**
+     * @todo
+     */
+    public on<K extends (keyof typeof ProtocolEvents | '*')>(message_type: K, listener: (args: K extends '*' ? any : typeof ProtocolEvents[K]) => any) {
+        return this.#events.on(message_type, listener as any)
+    }
 
 
 
