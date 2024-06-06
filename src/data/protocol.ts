@@ -5,16 +5,15 @@ export const PROTOCOL = protobuf.loadSync(import.meta.dirname + '/protocol.proto
 
 interface Variable<T> {
     type: 'enum' | 'struct' | 'world'
-    name: string
-    value: { [keys: string]: T } | null
+    key: string
 }
 
 interface EnumVar extends Variable<number> {
-    type: 'enum'
+    key: 'enum'
 }
 
 interface MessageVar extends Variable<string> {
-    type: 'struct'
+    key: 'struct'
 }
 
 interface WorldEvent extends Variable<{
@@ -22,7 +21,7 @@ interface WorldEvent extends Variable<{
     issuerLocalPlayerId: 'number'
     initArgs: string
 }> {
-    type: 'world'
+    key: 'world'
 }
 
 const Variables: Variable<any>[] = []
@@ -84,12 +83,6 @@ function traverse(type_declared: string[], declared: string[], key: string, prot
                 declared.push(key)
                 return false
         }
-    }
-
-    function treat_type(key: string) {
-        if (declared.includes(key))
-            return 'typeof ' + key
-        return key
     }
 
     function convert_to_js_type(s: string) {
@@ -201,33 +194,14 @@ function traverse(type_declared: string[], declared: string[], key: string, prot
         TypeScript.write(`\nexport type ${key} = {\n${attributes.map((([k, v]) => `\t${k}: ${v}`)).join('\n')}\n}\n`)
 
         // TypeScript.write(`${value.oneofs ? `\nexport type ${key}${generic} = ${oneof_types.join(' | ')}` : ''}\n\nexport type ${key}${value.oneofs ? `<${generic} extends ${key}${generic}>` : ''} = {\n${attributes.map((([k, v]) => `\t${k}: ${v}`)).join('\n')}\n}\n`)
-    } else if (name == 'Object') {
-        if (exists(key, 'const')) return
-
-        const enumerated: [string, string][] = []
-
-        // console.log(key, Object.keys(value).map(k => [k, ]))
-
-        for (const enum_member of Object.keys(value)) {
-            if (value[enum_member] == undefined) continue
-            enumerated.push([enum_member, value[enum_member]])
-        }
-
-        TypeScript.write(
-            // `\nexport type ${key}_Keys = ${enumerated.map(([k, v]) => `'${k}'`).join(' | ')}\n` + 
-            `\nexport declare const ${key}: {\n${enumerated.map(([k, v]) => `\t${k}: ${v}`).join(',\n')}\n}\n\n`
-            // `\nexport declare enum ${key} {\n${enumerated.map(([k, v]) => `\t['${k}'] = ${v}`).join(',\n')}\n}\n\n`
-        )
-        JavaScript.write(`\nexport const ${key} = ((o) => {\n${Object
-            .keys(value)
-            .filter(k => value[k] != undefined)
-            .map(k => `\to["${k}"] = ${value[k]}`)
-            .join('\n')}\n\treturn Object.freeze(o)\n})({})\n`)
     }
 }
 
 /**
- * In global scope, find all declared variables and match their types
+ * In global scope, find all declared variables and match their types.
+ * This labels all enums as constant mappings.
+ * This will label the special type 'WorldEvent'.
+ * This will label message types as structures.
  */
 (() => {
     const { protocol } = PROTOCOL.nested as any
@@ -239,43 +213,148 @@ function traverse(type_declared: string[], declared: string[], key: string, prot
         if (!value) continue
         const { name } = value.constructor
 
-        if (value.name == 'WorldEvent') {
-            Variables.push({
-                type: 'world',
-                name: value.name, // equals WorldEvent
-                value: null
-            } as WorldEvent)
-        } else if (name == 'Type') {
-            Variables.push({
-                type: 'struct',
-                name: key, // equals value.name
-                value: null
-            } as MessageVar)
+        // if (value.name == 'WorldEvent') {
+        //     Variables.push({ type: 'world', key } as WorldEvent)
+        // } else
+        if (name == 'Type') {
+            Variables.push({ type: 'struct', key } as MessageVar)
         } else if (name == 'Object') {
-            Variables.push({
-                type: 'enum',
-                name: key,
-                value: null
-            } as EnumVar)
+            Variables.push({ type: 'enum', key } as EnumVar)
         }
     }
-
-    console.log(Variables)
 })();
 
-(() => {
-    const type_declared: string[] = []
-    const declared: string[] = []
-    const { protocol } = PROTOCOL.nested as any
+/**
+ * This will treat the key and tell you if it
+ * is a typescript type or a value
+ */
+function treat_type(key: string) {
+    const Var = Variables.find(v => v.key == key)
+    if (Var && Var.type == 'enum')
+        return `(typeof ${key})[keyof typeof ${key}]`
+    return key
+}
 
-    for (const key in protocol) {
-        traverse(type_declared, declared, key, protocol)
+/**
+ * Write all enumerates
+ */
+(() => {
+    for (const { key } of Variables.filter(value => value.type == 'enum')) {
+        const Enum = PROTOCOL.lookupEnum(key)
+
+        TypeScript.write(`\nexport declare const ${key}: {\n${
+            Object.entries(Enum.values).map(([v, k]) => `\t${v}: ${k}`).join('\n')
+        }\n}\n`)
+        
+        JavaScript.write(`\nexport const ${key} = ((o) => {\n${
+            Object.entries(Enum.values).map(([v, k]) => `\to['${v}'] = ${k}`).join('\n')
+        }\n\treturn Object.freeze(o)\n})({})\n`)
+    }
+})()
+
+/**
+ * Convert a C type to TypeScript type
+ */
+function convert_to_js_type(s: string) {
+    s = treat_type(s)
+    if (s == 'bool')
+        return 'boolean'
+    else if (s == 'bytes')
+        return 'Buffer'
+    else if (/u?int(8|16|32|64|128)/.test(s) || s == 'double' || s == 'float')
+        return 'number'
+    return s
+}
+
+
+/**
+ * Write all structures
+ */
+(() => {
+    function traverse(data: protobuf.Type | protobuf.OneOf | protobuf.Field, hierarchy: any = {}, marked: string[] = [], level: number = 0) {
+        if (marked.includes(data.name) || marked.push(data.name) < 0) return
+        const OneOfs = (data as protobuf.Type)?.oneofsArray || []
+        const Fields = (data as protobuf.Type)?.fieldsArray || []
+
+        console.log('  '.repeat(level) + data.name)
+
+        for (const child of OneOfs) {
+            traverse(child, hierarchy, marked, level + 1)
+        }
+
+        // if (!data.oneofs as unknown) return
+
+        for (const child of Fields) {
+            traverse(child, hierarchy, marked, level + 1)
+            // console.log('\t', child.name)
+        //     // traverse(hierarchy + 1, marked, child.)
+        }
+
+        return hierarchy
+    }
+
+    for (const { key } of Variables.filter(value => value.type == 'struct')) {
+        const Type = PROTOCOL.lookupType(key)
+        const Keys = Object.keys(Type.fields)
+        const Oneofs = Type.oneofs ? Object.keys(Type.oneofs) : []
+        const LocalKeys = Keys.filter(k => Type.get(k)?.parent?.name == key)
+
+        // console.log(key)
+
+        for (const attr of Oneofs) {
+            const List = Type.get(attr) as protobuf.OneOf
+            // delete List['parent']
+            // console.log('\t', key, attr, List?.name, List.oneof)
+        }
+
+        // console.log(Type.oneofs['eventArgs'].fieldsArray.map(v => v.name))
+
+        if (Type.name == 'WorldEvent')
+            traverse(Type)
+
+        const MutualKeys = Object.keys(Type.fields).filter(k => !Type.oneofsArray.some(v => v.name == k))
+        // const OneOfs = Object.keys(Type.fields).filter(k => Type.oneofsArray.some(v => v.name == k))
+
+        // TODO one offs
+        // console.log(key, MutualKeys, OneOfs, Object.keys(Type.oneofs || {}))
+
+        TypeScript.write(`\nexport type ${key} = {\n`)
+
+        for (const attr of MutualKeys) {
+            // console.log(attr, Type.get(attr)?.name, Type.get(attr)?.parent?.name)
+            const value = Type.fields[attr] as protobuf.Field
+            const type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+            TypeScript.write(`\t${attr}${value.optional ? '?' : ''}: ${type}\n`)
+        }
+
+        TypeScript.write('}\n')
     }
 })();
 
+/**
+ * Write the World Events magic type
+ */
 (() => {
-    TypeScript.write(`\nexport type WorldEventMatch = \{\n${Object.entries(WorldEventMatch).map(([k, v]) => `\t${k}: ${v}`).join(',\n')}\n\}\n`)
+    const Type = PROTOCOL.lookupType('WorldEvent')
+    const Keys = Object.keys(Type.fields)
+    // const OneOfs = Object.values(Type.oneofs).map(v => Type[v.name])
+
+    // console.log()
+    // console.log(Object.keys(Type.oneofs))
+    // console.log(Type.oneofs['eventArgs'].fieldsArray.map(v => v.name))
+
+    // const type_declared: string[] = []
+    // const declared: string[] = []
+    // const { protocol } = PROTOCOL.nested as any
+
+    // for (const key in protocol) {
+    //     traverse(type_declared, declared, key, protocol)
+    // }
 })();
+
+// (() => {
+//     TypeScript.write(`\nexport type WorldEventMatch = \{\n${Object.entries(WorldEventMatch).map(([k, v]) => `\t${k}: ${v}`).join(',\n')}\n\}\n`)
+// })();
 
 TypeScript.close()
 JavaScript.close()
