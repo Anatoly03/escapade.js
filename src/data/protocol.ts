@@ -92,50 +92,6 @@ function traverse(declared: string[], key: string, protocol: protobuf.Reflection
     }
 })()
 
-// traverse([], PROTOCOL.nested?.protocol as protobuf.ReflectionObject)
-
 TypeScript.close()
 JavaScript.close()
 
-// <Generate Protocol Events>
-
-// for (const key in PROTOCOL.nested?.protocol) {
-//     const value = (PROTOCOL.nested?.protocol as any)[key] as protobuf.Type
-
-//     if (value?.constructor.name == 'Type') {
-//         ProtocolEvents[key] = {}
-
-//         for (const field in value.fields) {
-//             ProtocolEvents[key][field] = convert_to_js_type(value.fields[field].type)
-//         }
-//     }
-// }
-
-// </Generate Protocol Events>
-
-function protocol_events(): string {
-    return '{\n' + Object
-        .keys(ProtocolEvents)
-        .map(event => `\t${event}: ${event}`)
-        .join('\n') + '\n}'
-}
-
-function message_types(): string {
-    return Object
-        .keys(ProtocolEvents)
-        .map(event => `export type ${event} = {\n${Object
-            .keys(ProtocolEvents[event])
-            .map(field => `\t${field}: ${ProtocolEvents[event][field]},`)
-            .join('\n')}\n}`)
-        .join('\n\n')
-}
-
-
-// fs.writeFileSync(import.meta.dirname + '/protocol.d.ts', `
-// import protobuf from 'protobufjs'
-// export declare const PROTOCOL: protobuf.Root
-
-// ${message_types()}
-
-// export declare const ProtocolEvents: ${protocol_events()}
-// `)
