@@ -271,63 +271,58 @@ function convert_to_js_type(s: string) {
  * Write all structures
  */
 (() => {
-    function traverse(data: protobuf.Type | protobuf.OneOf | protobuf.Field, hierarchy: any = {}, marked: string[] = [], level: number = 0) {
-        if (marked.includes(data.name) || marked.push(data.name) < 0) return
-        const OneOfs = (data as protobuf.Type)?.oneofsArray || []
-        const Fields = (data as protobuf.Type)?.fieldsArray || []
-
-        console.log('  '.repeat(level) + data.name)
-
-        for (const child of OneOfs) {
-            traverse(child, hierarchy, marked, level + 1)
-        }
-
-        // if (!data.oneofs as unknown) return
-
-        for (const child of Fields) {
-            traverse(child, hierarchy, marked, level + 1)
-            // console.log('\t', child.name)
-        //     // traverse(hierarchy + 1, marked, child.)
-        }
-
-        return hierarchy
-    }
-
     for (const { key } of Variables.filter(value => value.type == 'struct')) {
         const Type = PROTOCOL.lookupType(key)
         const Keys = Object.keys(Type.fields)
         const Oneofs = Type.oneofs ? Object.keys(Type.oneofs) : []
-        const LocalKeys = Keys.filter(k => Type.get(k)?.parent?.name == key)
-
-        // console.log(key)
+        
+        let UsedKeys: string[] = []
+        let Combinations: string[][] = []
 
         for (const attr of Oneofs) {
             const List = Type.get(attr) as protobuf.OneOf
-            // delete List['parent']
-            // console.log('\t', key, attr, List?.name, List.oneof)
+            const ChildAttrs = List.fieldsArray.map(v => v.name)
+            const Tmp: string[][] = []
+
+            if (Combinations.length == 0) {
+                Combinations = [...ChildAttrs.map(v => [v])]
+                UsedKeys = ChildAttrs
+            } else for (const v of ChildAttrs) {
+                    if (!UsedKeys.includes(v))
+                        UsedKeys.push(v)
+                    for (const vs of Combinations) {
+                        Tmp.push([v, ...vs])
+                    }
+                }
         }
 
-        // console.log(Type.oneofs['eventArgs'].fieldsArray.map(v => v.name))
+        if (Combinations.length == 0)
+            Combinations = [[]]
 
-        if (Type.name == 'WorldEvent')
-            traverse(Type)
+        const MutualKeys = Object.keys(Type.fields).filter(k => !UsedKeys.includes(k))
 
-        const MutualKeys = Object.keys(Type.fields).filter(k => !Type.oneofsArray.some(v => v.name == k))
-        // const OneOfs = Object.keys(Type.fields).filter(k => Type.oneofsArray.some(v => v.name == k))
-
-        // TODO one offs
-        // console.log(key, MutualKeys, OneOfs, Object.keys(Type.oneofs || {}))
-
-        TypeScript.write(`\nexport type ${key} = {\n`)
-
-        for (const attr of MutualKeys) {
-            // console.log(attr, Type.get(attr)?.name, Type.get(attr)?.parent?.name)
-            const value = Type.fields[attr] as protobuf.Field
-            const type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
-            TypeScript.write(`\t${attr}${value.optional ? '?' : ''}: ${type}\n`)
+        for (const key_pairs of Combinations) {
+            key_pairs.push(...MutualKeys)
         }
 
-        TypeScript.write('}\n')
+        const TypeString = Combinations.map(keys => {
+            return keys.map(attr =>  {
+                const value = Type.fields[attr] as protobuf.Field
+                const type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+                return `\t${attr}${value.optional ? '?' : ''}: ${type}`
+            }).join('\n')
+        }).join('\n} | {\n')
+
+        TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
+
+        // for (const attr of MutualKeys) {
+        //     // console.log(attr, Type.get(attr)?.name, Type.get(attr)?.parent?.name)
+        //     const value = Type.fields[attr] as protobuf.Field
+        //     const type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+        //     TypeScript.write(`\t${attr}${value.optional ? '?' : ''}: ${type}\n`)
+        // }
+
+        // TypeScript.write('}\n')
     }
 })();
 
