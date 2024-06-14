@@ -70,140 +70,13 @@ const JavaScript = fs.createWriteStream(import.meta.dirname + '/protocol.g.js', 
 TypeScript.write(Header)
 JavaScript.write(Header)
 
-function traverse(type_declared: string[], declared: string[], key: string, protocol: protobuf.ReflectionObject) {
-    if (!protocol) return
-
-    function exists(key: string, t: 'type' | 'const') {
-        if (declared.includes(key) || type_declared.includes(key)) return true
-        switch (t) {
-            case 'type':
-                type_declared.push(key)
-                return false
-            case 'const':
-                declared.push(key)
-                return false
-        }
-    }
-
-    function convert_to_js_type(s: string) {
-        s = treat_type(s)
-        if (s == 'bool')
-            return 'boolean'
-        else if (s == 'bytes')
-            return 'Buffer'
-        else if (/u?int(8|16|32|64|128)/.test(s) || s == 'double' || s == 'float')
-            return 'number'
-        return s
-    }
-
-    const IGNORE_KEYS = ['options', 'nested']
-    if (IGNORE_KEYS.includes(key)) return
-
-    const value = (protocol as any)[key]
-    if (!value) return
-
-    const { name } = value.constructor
-
-    if (value.name == 'WorldEvent') {
-        if (exists(key, 'type')) return
-
-        const attributes: [string, string, string, number][] = []
-        const oneofs: string[] = value.oneofs?.eventArgs.oneof || []
-        const oneof_types: string[] = []
-        const generic = 'MessageType'
-
-        // if () {
-        //     console.log(value)
-        // }
-
-        for (const attr of Object.keys(value.fields)) {
-            let event_id = 0
-
-            if (oneofs.includes(attr)) {
-                const of_type: string = value.oneofs.eventArgs.fieldsArray.find((e: any) => e.name == attr).type
-                const pair = Object.entries(WorldEventMatch).find(([_, v]) => v == of_type) as [string, string]
-                const e = (WorldEventMatch as any)[pair[0]]
-
-                // console.log(pair)
-
-                // console.log(e)
-                
-                oneof_types.push(of_type)
-                event_id = PROTOCOL.lookupEnum('WorldEventType').values[pair[0]]
-
-                // console.log(event_id)
-
-                attributes.push([attr, pair[0], of_type, event_id])
-                // attributes.push([attr, `EventId extends '${pair[0]}' ? ${of_type} : never`])
-
-                // console.log(key, attr, of_type, PROTOCOL.lookupEnum('WorldEventType').values)
-            } else {
-                const ts_type = convert_to_js_type(value.fields[attr].type) + (value.fields[attr].repeated ? '[]' : '')
-                attributes.push([attr, '', ts_type, 0])
-            }
-
-            // console.log(key, attr, , , value.fields[attr].required ? 'required' : '-', value.fields[attr].map ? 'is map' : 'is not map')
-        }
-
-        const common_attributes = attributes.filter(([k]) => !oneofs.includes(k) && k !== 'eventType')
-        const oneof_attributes = attributes.filter(([k]) => oneofs.includes(k))
-
-        // (attributes.find(([k]) => k == 'eventType') as any)[1] = 'WorldEventType[EventId]'
-        // console.log(oneof_attributes)
-
-        TypeScript.write(
-            `\nexport type ${key} = {\n${oneof_attributes.map(([k, t, v]) => `\t${t}: {\n${
-                [['eventType', '', 0], ...common_attributes, [k, t, v]].map(([k, t, v]) => `\t\t${k}: ${v}`).join('\n')
-            }\n\t}`).join('\n')}\n}\n`
-        )
-
-        // TypeScript.write(
-        //     // `\nexport type ${key}_${generic} = ${oneof_types.map(k => `${k}`).join(' | ')}\n` + 
-        //     `export type ${key} = {\n${oneof_attributes.map((([k, v]) => `\t${k}: {\n${v}\n}`)).join('\n')}\n}\n`
-        // )
-
-    } else if (name == 'Type') {
-        if (exists(key, 'type')) return
-
-        const attributes: [string, string][] = []
-        const oneofs: string[] = value.oneofs?.eventArgs.oneof || []
-        const oneof_types: string[] = []
-        const generic = 'MessageType'
-
-        // if () {
-        //     console.log(value)
-        // }
-
-        for (const attr of Object.keys(value.fields)) {
-            if (oneofs.includes(attr)) {
-                const of_type: string = value.oneofs.eventArgs.fieldsArray.find((e: any) => e.name == attr).type
-                oneof_types.push(of_type)
-                attributes.push([attr, `${generic} extends ${of_type} ? ${of_type} : never`])
-                // console.log(key, attr, of_type, PROTOCOL.lookupEnum('WorldEventType').values)
-            } else {
-                const ts_type = convert_to_js_type(value.fields[attr].type) + (value.fields[attr].repeated ? '[]' : '')
-                attributes.push([attr, ts_type])
-            }
-
-            // console.log(key, attr, , , value.fields[attr].required ? 'required' : '-', value.fields[attr].map ? 'is map' : 'is not map')
-        }
-
-        const common_attributes = attributes.filter(([k]) => !oneofs.includes(k)).map(([k]) => k)
-        const oneof_attributes = attributes.filter(([k]) => oneofs.includes(k))
-
-        TypeScript.write(`\nexport type ${key} = {\n${attributes.map((([k, v]) => `\t${k}: ${v}`)).join('\n')}\n}\n`)
-
-        // TypeScript.write(`${value.oneofs ? `\nexport type ${key}${generic} = ${oneof_types.join(' | ')}` : ''}\n\nexport type ${key}${value.oneofs ? `<${generic} extends ${key}${generic}>` : ''} = {\n${attributes.map((([k, v]) => `\t${k}: ${v}`)).join('\n')}\n}\n`)
-    }
-}
-
 /**
  * In global scope, find all declared variables and match their types.
  * This labels all enums as constant mappings.
  * This will label the special type 'WorldEvent'.
  * This will label message types as structures.
  */
-(() => {
+;(() => {
     const { protocol } = PROTOCOL.nested as any
     const IGNORE_KEYS = ['options', 'nested']
 
@@ -212,11 +85,11 @@ function traverse(type_declared: string[], declared: string[], key: string, prot
         const value = (protocol as any)[key]
         if (!value) continue
         const { name } = value.constructor
+        const isWorldEvent = value.name == 'WorldEvent'
 
-        // if (value.name == 'WorldEvent') {
-        //     Variables.push({ type: 'world', key } as WorldEvent)
-        // } else
-        if (name == 'Type') {
+        if (value.name == 'WorldEvent') {
+            Variables.push({ type: 'world', key } as WorldEvent)
+        } else if (name == 'Type') {
             Variables.push({ type: 'struct', key } as MessageVar)
         } else if (name == 'Object') {
             Variables.push({ type: 'enum', key } as EnumVar)
@@ -266,14 +139,16 @@ function convert_to_js_type(s: string) {
     return s
 }
 
-
 /**
  * Write all structures
  */
 (() => {
-    for (const { key } of Variables.filter(value => value.type == 'struct')) {
+    const WorldEvent = PROTOCOL.lookupType('WorldEvent')
+    const WorldEventTypes = PROTOCOL.lookupEnum('WorldEventType').values
+
+    for (const Var of Variables.filter(value => value.type == 'struct' || value.type == 'world')) {
+        const { key } = Var
         const Type = PROTOCOL.lookupType(key)
-        const Keys = Object.keys(Type.fields)
         const Oneofs = Type.oneofs ? Object.keys(Type.oneofs) : []
         
         let UsedKeys: string[] = []
@@ -300,6 +175,7 @@ function convert_to_js_type(s: string) {
             Combinations = [[]]
 
         const MutualKeys = Object.keys(Type.fields).filter(k => !UsedKeys.includes(k))
+        const UsedEvents: number[] = []
 
         for (const key_pairs of Combinations) {
             key_pairs.push(...MutualKeys)
@@ -307,13 +183,33 @@ function convert_to_js_type(s: string) {
 
         const TypeString = Combinations.map(keys => {
             return keys.map(attr =>  {
+                let type
                 const value = Type.fields[attr] as protobuf.Field
-                const type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+
+                if (Var.type == 'world' && attr == 'eventType') {
+                    const param = keys.filter(k => k != 'eventType' && k != 'issuerLocalPlayerId')[0]
+                    const param_type = WorldEvent.fields[param].type
+                    const [event_name] = Object.entries(WorldEventMatch).find(([_, v]) => v == param_type) as [string, string]
+                    const event_id = WorldEventTypes[event_name]
+                    // console.log(param, param_type, event_name, event_id)
+                    UsedEvents.push(event_id)
+                    return '\teventType: ' + event_id
+                }
+                else {
+                    type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+                }
+
                 return `\t${attr}${value.optional ? '?' : ''}: ${type}`
             }).join('\n')
         }).join('\n} | {\n')
 
-        TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
+        if (Var.type == 'world') {
+            const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + Object.entries(WorldEventTypes).filter(([k, v]) => !UsedEvents.includes(v)).map(([k, v]) => v).join(' | ')
+            console.log(MutualKeys)
+            return TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
+        } else {
+            TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
+        }
 
         // for (const attr of MutualKeys) {
         //     // console.log(attr, Type.get(attr)?.name, Type.get(attr)?.parent?.name)
@@ -346,10 +242,6 @@ function convert_to_js_type(s: string) {
     //     traverse(type_declared, declared, key, protocol)
     // }
 })();
-
-// (() => {
-//     TypeScript.write(`\nexport type WorldEventMatch = \{\n${Object.entries(WorldEventMatch).map(([k, v]) => `\t${k}: ${v}`).join(',\n')}\n\}\n`)
-// })();
 
 TypeScript.close()
 JavaScript.close()

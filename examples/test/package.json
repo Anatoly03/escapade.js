@@ -1,0 +1,24 @@
+{
+  "name": "bombot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "pixelwalker.js": "^1.0.12",
+    "tsx": "^4.9.3"
+  },
+  "dependencies": {
+    "@types/protobufjs": "^6.0.0",
+    "protobufjs": "^7.3.0",
+    "yaml": "^2.4.2"
+  }
+}
