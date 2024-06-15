@@ -84,5 +84,6 @@ export interface MoveArgs {
 
 export type SendEventTypes = {
     Init: {},
+	Leave: {},
     Chat: ChatArgs
 }

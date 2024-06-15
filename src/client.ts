@@ -295,19 +295,24 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     }
 
     /**
-     * @todo
+     * Disconnects the client, and if in the world, leave.
      */
-    disconnect() {
-        this.#socket?.close()
+    disconnect(): void {
+        if (this.unsafe()) {
+            this.send('Leave')
+            this.#socket?.close()
+        }
     }
 
     /**
      * @todo
+     * @deprecated This will soon require UNSAFE FLAG to be executed.
      */
+    // TODO add `this: EscapadeClient<true, true>, ` type guard in param
     public send<EventName extends keyof SendEventTypes>
-        (this: EscapadeClient<true, true>, message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true, true>
+        (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true, true>
 
-    public send(this: EscapadeClient<true, true>, message_type: string, payload: any = {}): EscapadeClient<true, true> {
+    public send(message_type: string, payload: any = {}): EscapadeClient<true, true> {
         if (!this.connected()) throw new Error('Socket is not connected!')
         const Message = EscapadeClient.protocol.lookupType('WorldEvent')
         const eventType: number = EscapadeClient.WorldEvents[message_type]

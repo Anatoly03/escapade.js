@@ -10,21 +10,24 @@ client.raw().once('Init', args => {
     client.send('Sync')
 })
 
+client.raw().on('Block', args => {
+    console.log(args)
+})
+
 client.on('player:join', (player, new_join) => {
     if (!new_join) return
     client.say(`[BOT] Hello, ${player.name?.toUpperCase()}!`)
 })
 
-client.on('player:join', (player, new_join) => {
-    if (!client.unsafe()) return
-    client.send('CanEditChange', {
-        canEdit: true
-    })
-    console.log('Gave Edit:', player.name)
-})
+// client.on('player:join', (player, new_join) => {
+//     if (!client.unsafe()) return
+//     if (!player.name) return
+//     client.say(`/edit ${player.name}!`)
+//     console.log('Gave Edit:', player.name)
+// })
 
 // console.log(worlds)
-client.raw().on('*', console.log)
+// client.raw().on('*', console.log)
 
 // client.on('Chat', args => {
 //     console.log(args)
