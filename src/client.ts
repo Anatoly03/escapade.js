@@ -17,6 +17,12 @@ interface CustomEvents {
     'close': [string]
 }
 
+/**
+ * @param {boolean} Ready The type parameter defines, wether
+ * or not the game socket is connected. It is assumed by type
+ * guard `EscapadeClient.connected()` which is true, if the
+ * socket can send and receive events.
+ */
 export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
@@ -24,6 +30,17 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
     #events: EventEmitter<{}>
 
+    /**
+     * @example
+     * Create an Escapade Client with login information using the dotenv package.
+     * 
+     * ```ts
+     * import 'dotenv/config'
+     * const client = new EscapadeClient({ token: process.env.token } as any)
+     * ```
+     * 
+     * @param args Login Information
+     */
     constructor(args: { token: string }) {
         super()
         this.#token = args.token
@@ -33,6 +50,16 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
 
     /**
      * Is truthy, if the client socket is connected.
+     * This is a [type guard](https://www.typescriptlang.org/docs/handbook/advanced-types.html),
+     * which can set the `Ready` type parameter and add new methods in a closed scope.
+     * 
+     * @example
+     * 
+     * ```ts
+     * if (client.connected()) {
+     *     client.send('Sync')
+     * }
+     * ```
      */
     public connected(): this is EscapadeClient<true> {
         return this.#socket !== undefined && this.#socket.readyState === this.#socket.OPEN
@@ -48,6 +75,14 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
 
     /**
      * Get the event handler of all raw events emitted by the game server.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.raw().on('Chat', args => {
+     *     console.log(args.message)
+     * })
+     * ```
      */
     public raw(): EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]}> {
         return this.#events_raw
@@ -67,22 +102,22 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
     public static WorldEvents = PROTOCOL.lookupEnum('WorldEventType').values
 
     /**
-     * @todo
+     * @todo @ignore
      */
     async get<T extends Profile<boolean>>(endpoint: 'me'): Promise<T>
 
     /**
-     * @todo
+     * @todo @ignore
      */
     async get<T extends { invites_received: Friend[], friends: Friend[], invites_sent: Friend[] }>(endpoint: 'me/friends'): Promise<T>
 
     /**
-     * @todo
+     * @todo @ignore
      */
     async get<T extends WorldMeta[]>(endpoint: 'me/worlds'): Promise<T>
 
     /**
-     * @todo
+     * @todo @ignore
      */
     async get<T extends WorldMeta[]>(endpoint: 'worlds'): Promise<T>
 
@@ -114,9 +149,11 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
     }
 
     /**
-     * @todo
+     * @ignore This function uses the old token to auto refresh.
+     * This will not be documented, since this is supposed to be used
+     * in the SDK internals only.
      */
-    private async try_refresh_token() {
+    public async try_refresh_token() {
         const response = await fetch(`${ESCAPADE_API}/auth/refresh`, {
             method: 'POST',
             headers: {
