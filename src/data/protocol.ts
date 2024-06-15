@@ -116,7 +116,7 @@ function treat_type(key: string) {
         const Enum = PROTOCOL.lookupEnum(key)
 
         TypeScript.write(`\nexport declare const ${key}: {\n${
-            Object.entries(Enum.values).map(([v, k]) => `\t'${v}': ${k}`).join('\n')
+            Object.entries(Enum.values).map(([v, k]) => `\t${v}: ${k}`).join('\n')
         }\n}\n`)
         
         JavaScript.write(`\nexport const ${key} = ((o) => {\n${

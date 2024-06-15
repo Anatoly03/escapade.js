@@ -10,6 +10,10 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 
 const worlds = await client.get('worlds')
 
+// client.on('Chat', args => {
+//     console.log(args)
+// })
+
 // function traverse(reflection: protobuf.ReflectionObject) {
 //     if (!reflection) return
 
@@ -127,7 +131,7 @@ const worlds = await client.get('worlds')
 console.log()
 // console.log(EscapadeClient.protocol['JoinWorld'])
 
-client.on('*', console.log)
+// client.on('*', console.log)
 
 
 client.on('Chat', args => {

@@ -161,9 +161,14 @@ export class EscapadeClient<Ready extends boolean> {
         this.#socket.on('message', async (ev) => {
             const Event = EscapadeClient.protocol.lookupType('WorldEvent')
             const buffer = new Uint8Array(ev as ArrayBuffer)
-            const data = Event.decode(buffer)
+            const data = Event.decode(buffer) as any
+            const event_name = Object
+                .keys(WorldEventType)
+                .map(k => [k, WorldEventType[k as any]])
+                .find(([k, v]) => v === data.eventType)
 
             this.#events.emit('*', data as any)
+            if (event_name !== undefined) this.#events.emit(event_name[0] as any, data)
         })
 
         this.#socket.on('close', async (code, reason) => {
@@ -188,14 +193,15 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send(message_type: 'JoinWorld', args: JoinWorld): any;
+    public send(message_type: 'JoinWorld', args: JoinWorld): this
 
     /**
      * @todo
      */
-    public send<EventName extends keyof WorldEventType>(message_type: EventName, args: WorldEvent & { eventType: WorldEventType[EventName] }): any;
+    public send<EventName extends keyof typeof WorldEventType, EventId = (typeof WorldEventType)[EventName]>
+        (message_type: EventName, args: (WorldEvent & { eventType: EventId })): this
 
-    public send<K extends keyof typeof ProtocolEvents>(this: EscapadeClient<true>, message_type: K, payload: typeof ProtocolEvents[K]): void {
+    public send(message_type: any, payload: any): this {
         if (!this.connected()) throw new Error('Socket is not connected!')
         const Message = EscapadeClient.protocol.lookupType(message_type as string)
 
@@ -205,12 +211,9 @@ export class EscapadeClient<Ready extends boolean> {
         const data = Message.create(payload)
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
-    }
 
-    /**
-     * @todo
-     */
-    public on(message_type: 'C', listener: (args: (WorldEvent & { eventType: 23 })) => any): this;
+        return this
+    }
 
     /**
      * @todo
