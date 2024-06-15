@@ -136,6 +136,11 @@ console.log()
 
 client.on('Chat', args => {
     console.log(args)
+    if (args.chatArgs.message == '!ping') {
+        client.send('Chat', {
+            message: 'Pong!'
+        })
+    }
 })
 
 

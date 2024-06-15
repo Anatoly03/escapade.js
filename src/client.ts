@@ -3,10 +3,9 @@ import WebSocket from 'ws'
 import { EventEmitter } from 'events'
 
 import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
-import { PROTOCOL } from './data/protocol.js'
+import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import * as ProtocolEvents from './data/protocol.g.js'
-import { WorldEvent, WorldEventType, JoinWorld, WorldEventMatch } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, JoinWorld, SendEventTypes } from './data/protocol.g.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
@@ -46,7 +45,12 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo The compiled protocol for Escapade
      */
-    static protocol: typeof PROTOCOL = PROTOCOL
+    public static protocol: typeof PROTOCOL = PROTOCOL
+
+    /**
+     * @ignore
+     */
+    private static WorldEvents = PROTOCOL.lookupEnum('WorldEventType').values
 
     /**
      * @todo
@@ -150,7 +154,7 @@ export class EscapadeClient<Ready extends boolean> {
         this.#socket.binaryType = 'arraybuffer'
 
         this.#socket.on('open', async () => {
-            this.send('JoinWorld' as any, {
+            this.send('JoinWorld', {
                 worldId: world_id,
                 authToken: this.#token
             })
@@ -198,12 +202,27 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send<EventName extends keyof typeof WorldEventType, EventId = (typeof WorldEventType)[EventName]>
-        (message_type: EventName, args: (WorldEvent & { eventType: EventId })): this
+    public send<EventName extends keyof SendEventTypes>
+        (message_type: EventName, args: SendEventTypes[EventName]): this
 
-    public send(message_type: any, payload: any): this {
+    public send(message_type: string, payload: any = {}): this {
         if (!this.connected()) throw new Error('Socket is not connected!')
-        const Message = EscapadeClient.protocol.lookupType(message_type as string)
+        let Message: protobuf.Type
+        
+        switch (message_type) {
+            case 'JoinWorld':
+                Message = EscapadeClient.protocol.lookupType('JoinWorld')
+                break
+                
+            default:
+                const eventType: number = EscapadeClient.WorldEvents[message_type]
+                const attrs = WorldEventMatch[message_type]
+                const tmp = payload
+                Message = EscapadeClient.protocol.lookupType('WorldEvent')
+                payload = { eventType }
+                if (attrs && attrs.length > 0) payload[attrs[0]] = tmp
+                break
+        }
 
         const err = Message.verify(payload)
         if (err) throw new Error(err)

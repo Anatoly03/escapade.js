@@ -26,7 +26,7 @@ interface WorldEvent extends Variable<{
 
 const Variables: Variable<any>[] = []
 
-const WorldEventMatch: {[keys: string]: string[]} = {
+export const WorldEventMatch: {[keys: string]: string[]} = {
 	Init: ['initArgs'],
 	Sync: [],
 	WorldInfoUpdate: ['worldInfoArgs'],
@@ -139,6 +139,10 @@ function convert_to_js_type(s: string) {
     return s
 }
 
+const UsedEvents: number[] = [];
+const WorldEventMaps: [string, string][] = [];
+let EventsWithoutArguments: [string, number][] = [];
+
 /**
  * Write all structures
  */
@@ -175,7 +179,6 @@ function convert_to_js_type(s: string) {
             Combinations = [[]]
 
         const MutualKeys = Object.keys(Type.fields).filter(k => !UsedKeys.includes(k))
-        const UsedEvents: number[] = []
 
         for (const key_pairs of Combinations) {
             key_pairs.push(...MutualKeys)
@@ -200,6 +203,7 @@ function convert_to_js_type(s: string) {
                 }
                 else {
                     type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
+                    if (Var.type == 'world' && attr != 'issuerLocalPlayerId') WorldEventMaps.push([attr, type])
                 }
 
                 return `\t${attr}${(Var.type != 'world' && value.optional) ? '?' : ''}: ${type}`
@@ -207,9 +211,8 @@ function convert_to_js_type(s: string) {
         }).join('\n} | {\n')
 
         if (Var.type == 'world') {
-            // console.log(UsedEvents)
-            const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + Object.entries(WorldEventTypes).filter(([k, v]) => !UsedEvents.includes(v)).map(([k, v]) => v).join(' | ')
-            // console.log(MutualKeys)
+            EventsWithoutArguments = Object.entries(WorldEventTypes).filter(([k, v]) => !UsedEvents.includes(v))
+            const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + EventsWithoutArguments.map(([k, v]) => v).join(' | ')
             TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
         } else {
             TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
@@ -230,10 +233,18 @@ function convert_to_js_type(s: string) {
  * Write the World Events magic type
  */
 (() => {
-    const Type = PROTOCOL.lookupType('WorldEvent')
     const WorldEventTypes = PROTOCOL.lookupEnum('WorldEventType').values
-    const Keys = Object.keys(Type.fields)
-    // const OneOfs = Object.values(Type.oneofs).map(v => Type[v.name])
+    const TypeMap = [...Object.entries(WorldEventTypes).map(([k, v]) => {
+        if (EventsWithoutArguments.some(([kx]) => kx == k))
+            return [k, '{}']
+        const event = Object.entries(WorldEventMatch).find(([kx, vx]) => kx == k)
+        if (!event) return [`\t// There was an error during file compilation: ${v}`, k]
+        const attrs = event[1]
+        const Type = treat_type(PROTOCOL.lookupType('WorldEvent').fields[attrs[0]].type)
+        return [k, Type]
+    })]
+
+    TypeScript.write(`\nexport type SendEventTypes = {\n${TypeMap.map(([k, v]) => `\t${k}: ${v}`).join('\n')}\n}\n`)
 
     // console.log(WorldEventMatch)
 
@@ -259,7 +270,8 @@ function convert_to_js_type(s: string) {
     //     traverse(type_declared, declared, key, protocol)
     // }
 
-    TypeScript.write('\nexport type WorldEventMap = {}\n')
+    // console.log(WorldEventMaps)
+    // console.log(EventsWithoutArguments)
 })();
 
 TypeScript.close()

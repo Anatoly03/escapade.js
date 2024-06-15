@@ -32,3 +32,8 @@ export type ChatArgs = {
 export type WorldEventMatch = {
     Chat: ChatArgs
 }
+
+export type SendEventTypes = {
+    Init: {},
+    Chat: ChatArgs
+}
