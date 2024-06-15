@@ -5,7 +5,7 @@ import { EventEmitter } from 'events'
 import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
 
@@ -409,6 +409,38 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     public async say(message: string): Promise<true> {
         if (!this.unsafe()) throw new Error('Client not connected.')
         this.send('Chat', { message })
+        return true
+    }
+
+    /**
+     * @todo @example
+     * 
+     * ```ts
+     * client.pm(user, 'Hello, World!')
+     * ```
+     */
+    public async pm(target: PlayerInfo, message: string): Promise<true>
+
+    /**
+     * @todo @example
+     * 
+     * ```ts
+     * client.pm('user', 'Hello, World!')
+     * ```
+     */
+    public async pm(target_username: string, message: string): Promise<true>
+
+    /**
+     * @todo @example
+     * 
+     * ```ts
+     * client.pm(1, 'Hello, World!')
+     * ```
+     */
+    public async pm(target_id: number, message: string): Promise<true>
+
+    public async pm(...args: any[]) {
+        throw new Error('Not Implemented!')
         return true
     }
 }
