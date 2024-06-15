@@ -5,9 +5,9 @@ import EscapadeClient from '../../../dist'
 const client = new EscapadeClient({ token: process.env.token } as any)
 // const worlds = await client.get('worlds')
 
-client.raw().once('Init', args => {
-    if (!client.unsafe()) return
-    client.send('Sync')
+client.once('start', () => {
+    client.sync()
+    client.say('[BOT] Connected!')
 })
 
 client.raw().on('Block', args => {
