@@ -40,9 +40,9 @@ export interface InitArgs {
 }
 
 export interface ChatArgs {
-	message: string
-	isPrivate: boolean
-	targetLocalPlayerId: number
+	message?: string
+	isPrivate?: boolean
+	targetLocalPlayerId?: number
 }
 
 export interface PlayerInfo {

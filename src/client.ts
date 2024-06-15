@@ -349,6 +349,7 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
 
 
 
+    // TODO <TODO>
 
     async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
 
@@ -367,5 +368,23 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
             return [response.status, await response.json()]
 
         throw new Error('Status Error (' + response.status + '): ' + response.text())
+    }
+
+    // </TODO>
+
+
+    /**
+     * @param {string} message The string content of the message that should be sent to the chat.
+     * 
+     * @example
+     * 
+     * ```
+     * client.say('Hello, World!')
+     * ```
+     */
+    public async say(message: string): Promise<true> {
+        if (!this.unsafe()) throw new Error('Client not connected.')
+        this.send('Chat', { message })
+        return true
     }
 }

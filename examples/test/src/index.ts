@@ -12,10 +12,7 @@ client.raw().once('Init', args => {
 
 client.on('player:join', (player, new_join) => {
     if (!new_join) return
-    if (!client.unsafe()) return
-    client.send('Chat', {
-        message: `[BOT] Hello, ${player.name?.toUpperCase()}!`
-    })
+    client.say(`[BOT] Hello, ${player.name?.toUpperCase()}!`)
 })
 
 client.on('player:join', (player, new_join) => {
