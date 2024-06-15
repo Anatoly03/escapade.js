@@ -17,6 +17,8 @@ export default (players: Player[]) => (client: EscapadeClient<boolean, boolean>)
         for (const player of players) {
             client.emit('player:join', player, false)
         }
+
+        client.emit('start')
     })
 
     /**

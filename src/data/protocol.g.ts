@@ -11,6 +11,7 @@ export type JoinWorld = {
 
 export enum WorldEventType {
     Init = 0,
+    Sync = 1,
 	Add = 20,
 	Leave = 21,
 	Chat = 23,
@@ -83,7 +84,8 @@ export interface MoveArgs {
 }
 
 export type SendEventTypes = {
-    Init: {},
+    // Init: {},
+    Sync: {},
 	Leave: {},
     Chat: ChatArgs
 }

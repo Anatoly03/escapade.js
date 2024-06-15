@@ -378,12 +378,31 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     // </TODO>
 
 
+
+
+    /**
+     * @example
+     * 
+     * Synchronize. You need to send this, if you want
+     * to see the bot player in the world.
+     * 
+     * ```ts
+     * client.on('start', () => {
+     *     client.sync()
+     * })
+     * ```
+     */
+    public sync() {
+        if (!this.unsafe()) throw new Error('Client not connected.')
+        this.send('Sync')
+    }
+
     /**
      * @param {string} message The string content of the message that should be sent to the chat.
      * 
      * @example
      * 
-     * ```
+     * ```ts
      * client.say('Hello, World!')
      * ```
      */

@@ -8,8 +8,9 @@
 import EscapadeClient from 'pixelwalker.js'
 const client = new Client({ token: 'YOUR TOKEN HERE' })
 
-client.raw().once('Init', () => {
-    client.send('Sync')
+client.once('start', () => {
+    client.sync()
+    client.say('Connected!')
 })
 
 await client.connect('WORLD ID')
