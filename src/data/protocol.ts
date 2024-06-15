@@ -26,38 +26,38 @@ interface WorldEvent extends Variable<{
 
 const Variables: Variable<any>[] = []
 
-const WorldEventMatch = {
-	Init: 'InitArgs',
-	Sync: null,
-	WorldInfoUpdate: 'WorldInfo',
-	Notification: 'NotificationArgs',
-	WorldReset: 'WorldResetArgs',
-	Block: 'BlockArgs',
-	Add: 'PlayerInfo',
-	Leave: null,
-	PlayerReset: 'PlayerResetArgs',
-	Chat: 'ChatArgs',
-	SmileyChange: 'SmileyChangeArgs',
-	AuraChange: 'AuraChangeArgs',
-	CanEditChange: 'CanEditChangeArgs',
-	CanUseGodModeChange: 'CanUseGodModeChangeArgs',
-	Move: 'MoveArgs',
-	MoveUpdate: 'MoveArgs',
-	Death: 'DeathArgs',
-	SetRespawnPoint: 'Vector2U',
-	Respawn: 'RespawnArgs',
-	MapEnablerTouch: 'BlockTouchArgs',
-	GodModeEnablerTouch: 'BlockTouchArgs',
-	TrophyTouch: 'BlockTouchArgs',
-	CoinCollect: 'CoinCollectArgs',
-	KeyTouch: 'KeyTouchArgs',
-	CrownTouch: 'BlockTouchArgs',
-	PurpleSwitchTouch: 'SwitchTouchArgs',
-	OrangeSwitchTouch: 'SwitchTouchArgs',
-	CheckpointTouch: 'BlockTouchArgs',
-	EffectTouch: 'EffectTouchArgs',
-	PlayerTouch: 'PlayerTouchArgs',
-	TeamChange: 'TeamChangeArgs'
+const WorldEventMatch: {[keys: string]: string[]} = {
+	Init: ['initArgs'],
+	Sync: [],
+	WorldInfoUpdate: ['worldInfoArgs'],
+	Notification: ['notificationArgs'],
+	WorldReset: ['worldResetArgs'],
+	Block: ['blockArgs'],
+	Add: ['addArgs'],
+	Leave: [],
+	PlayerReset: ['playerResetArgs'],
+	Chat: ['chatArgs'],
+	SmileyChange: ['smileyChangeArgs'],
+	AuraChange: ['auraChangeArgs'],
+	CanEditChange: ['canEditArgs'],
+	CanUseGodModeChange: ['canUseGodModeArgs'],
+	Move: ['moveArgs'],
+	MoveUpdate: ['moveArgs'],
+	Death: ['deathArgs'],
+	SetRespawnPoint: ['setRespawnPointArgs'],
+	Respawn: ['respawnArgs'],
+	MapEnablerTouch: ['blockTouchArgs'],
+	GodModeEnablerTouch: ['blockTouchArgs'],
+	TrophyTouch: ['blockTouchArgs'],
+	CoinCollect: ['coinCollectArgs'],
+	KeyTouch: ['keyTouchArgs'],
+	CrownTouch: ['blockTouchArgs'],
+	PurpleSwitchTouch: ['switchTouchArgs'],
+	OrangeSwitchTouch: ['switchTouchArgs'],
+	CheckpointTouch: ['blockTouchArgs'],
+	EffectTouch: ['effectTouchArgs'],
+	PlayerTouch: ['playerTouchArgs'],
+	TeamChange: ['teamChangeArgs'],
 }
 
 const Header = `\n/*
@@ -116,7 +116,7 @@ function treat_type(key: string) {
         const Enum = PROTOCOL.lookupEnum(key)
 
         TypeScript.write(`\nexport declare const ${key}: {\n${
-            Object.entries(Enum.values).map(([v, k]) => `\t${v}: ${k}`).join('\n')
+            Object.entries(Enum.values).map(([v, k]) => `\t'${v}': ${k}`).join('\n')
         }\n}\n`)
         
         JavaScript.write(`\nexport const ${key} = ((o) => {\n${
@@ -188,25 +188,29 @@ function convert_to_js_type(s: string) {
 
                 if (Var.type == 'world' && attr == 'eventType') {
                     const param = keys.filter(k => k != 'eventType' && k != 'issuerLocalPlayerId')[0]
-                    const param_type = WorldEvent.fields[param].type
-                    const [event_name] = Object.entries(WorldEventMatch).find(([_, v]) => v == param_type) as [string, string]
-                    const event_id = WorldEventTypes[event_name]
-                    // console.log(param, param_type, event_name, event_id)
-                    UsedEvents.push(event_id)
-                    return '\teventType: ' + event_id
+                    // const param_type = WorldEvent.fields[param].type
+                    const param_keys = Object.entries(WorldEventMatch).filter(([_, v]) => v.some(s => param == s))
+                    const event_ids = param_keys.map(([k, _]) => WorldEventTypes[k])
+                    // console.log(param, param_type, param_keys)
+                    // const [event_name] = Object.entries(WorldEventMatch).find(([_, v]) => v.includes(param)) as [string, [string]]
+                    // const event_id = WorldEventTypes[event_name]
+                    // console.log(event_name, event_id)
+                    UsedEvents.push(...event_ids)
+                    return '\teventType: ' + event_ids.join(' | ')
                 }
                 else {
                     type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')
                 }
 
-                return `\t${attr}${value.optional ? '?' : ''}: ${type}`
+                return `\t${attr}${(Var.type != 'world' && value.optional) ? '?' : ''}: ${type}`
             }).join('\n')
         }).join('\n} | {\n')
 
         if (Var.type == 'world') {
+            // console.log(UsedEvents)
             const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + Object.entries(WorldEventTypes).filter(([k, v]) => !UsedEvents.includes(v)).map(([k, v]) => v).join(' | ')
-            console.log(MutualKeys)
-            return TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
+            // console.log(MutualKeys)
+            TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
         } else {
             TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
         }
@@ -227,8 +231,21 @@ function convert_to_js_type(s: string) {
  */
 (() => {
     const Type = PROTOCOL.lookupType('WorldEvent')
+    const WorldEventTypes = PROTOCOL.lookupEnum('WorldEventType').values
     const Keys = Object.keys(Type.fields)
     // const OneOfs = Object.values(Type.oneofs).map(v => Type[v.name])
+
+    // console.log(WorldEventMatch)
+
+    // Object
+    //     .keys(Type.fields)
+    //     .filter(k => k != 'eventType' && k != 'issuerLocalPlayerId')
+    //     .forEach(key => {
+    //         const map = Object.entries(WorldEventMatch).find(([_, v]) => Type.fields[key].type == v)
+    //         console.log(key, Type.fields[key].name, Type.fields[key].type, map)
+    //     })
+
+    // Object.entries(WorldEventMatch)
 
     // console.log()
     // console.log(Object.keys(Type.oneofs))
@@ -241,6 +258,8 @@ function convert_to_js_type(s: string) {
     // for (const key in protocol) {
     //     traverse(type_declared, declared, key, protocol)
     // }
+
+    TypeScript.write('\nexport type WorldEventMap = {}\n')
 })();
 
 TypeScript.close()

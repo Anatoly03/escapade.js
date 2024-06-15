@@ -9,16 +9,18 @@ export type JoinWorld = {
 	worldId: string
 }
 
-export type WorldEventType = {
-	Chat: 23,
+export enum WorldEventType {
+    Init = 0,
+	Chat = 23,
 }
 
 export type WorldEvent = {
-    Chat: {
-        eventType: number
-        issuerLocalPlayerId: number
-        chatArgs: ChatArgs
-    }
+	chatArgs: ChatArgs
+	eventType: 23
+	issuerLocalPlayerId: number
+} | {
+	issuerLocalPlayerId: number
+	eventType: 1 | 21
 }
 
 export type ChatArgs = {

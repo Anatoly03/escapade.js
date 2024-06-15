@@ -139,6 +139,7 @@ client.on('Chat', args => {
 
 // client.connect(worlds[0].id)
 await client.connect('k7HdYhzHzLML')
+// await client.send('Sync')
 
 // await new Promise(res => setTimeout(res, 200))
 // client.send('Chat', {

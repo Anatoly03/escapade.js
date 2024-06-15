@@ -143,7 +143,7 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public async connect(world_id: string) {
+    public async connect(world_id: string): Promise<Ready> {
         await this.try_refresh_token()
 
         this.#socket = new WebSocket(SOCKET_URL)
@@ -173,6 +173,16 @@ export class EscapadeClient<Ready extends boolean> {
         this.#socket.on('error', async (err) => {
             this.#events.emit<'error'>('error', err)
         })
+
+        // await new Promise((res, rej) => {
+
+        //     this.#socket.once('Chat', () => res(true))
+        //     this.once('error', () => rej(true))
+
+        //     this.#socket?.removeEventListener()
+        // })
+
+        return this.connected() as Ready
     }
 
     /**
@@ -183,7 +193,7 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public send<EventId extends keyof WorldEventType>(message_type: EventId, args: Partial<WorldEventMatch[EventId]>): any;
+    public send<EventName extends keyof WorldEventType>(message_type: EventName, args: WorldEvent & { eventType: WorldEventType[EventName] }): any;
 
     public send<K extends keyof typeof ProtocolEvents>(this: EscapadeClient<true>, message_type: K, payload: typeof ProtocolEvents[K]): void {
         if (!this.connected()) throw new Error('Socket is not connected!')
@@ -200,15 +210,29 @@ export class EscapadeClient<Ready extends boolean> {
     /**
      * @todo
      */
-    public on<EventId extends keyof WorldEventType>(message_type: EventId, listener: (args: WorldEvent[EventId]) => any): this;
+    public on(message_type: 'C', listener: (args: (WorldEvent & { eventType: 23 })) => any): this;
 
     /**
      * @todo
      */
-    public on<EventId extends keyof CustomEvents>(message_type: EventId, listener: (args: CustomEvents[EventId]) => any): this;
+    public on<EventName extends keyof typeof WorldEventType, EventId = (typeof WorldEventType)[EventName]>
+        (message_type: EventName, listener: (args: (WorldEvent & { eventType: EventId })) => any): this
 
-    public on(message_type: any, listener: (args: any) => any) {
+    /**
+     * @todo
+     */
+    public on<EventName extends keyof CustomEvents>(message_type: EventName, listener: (args: CustomEvents[EventName]) => any): this;
+
+    public on(message_type: any, listener: (args: any) => any = () => void(0)) {
         this.#events.on(message_type, listener)
+        return this
+    }
+
+    /**
+     * @todo @ignore
+     */
+    public once(message_type: any, listener: (args: any) => any) {
+        this.#events.once(message_type, listener)
         return this
     }
 
