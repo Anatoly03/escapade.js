@@ -133,7 +133,7 @@ function convert_to_js_type(s: string) {
     if (s == 'bool')
         return 'boolean'
     else if (s == 'bytes')
-        return 'Buffer'
+        return 'Uint8Array'
     else if (/u?int(8|16|32|64|128)/.test(s) || s == 'double' || s == 'float')
         return 'number'
     return s
