@@ -38,7 +38,6 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     #self: Player | undefined
 
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
-    #events: EventEmitter<{}>
 
     /**
      * @example
@@ -54,7 +53,6 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     constructor(args: { token: string }) {
         super()
         this.#token = args.token
-        this.#events = new EventEmitter()
         this.#events_raw = new EventEmitter()
 
         this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
