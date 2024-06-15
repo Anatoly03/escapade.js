@@ -6,8 +6,9 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 // const worlds = await client.get('worlds')
 
 client.once('start', () => {
+    if (!client.connected()) return
     client.sync()
-    client.say('[BOT] Connected!')
+    client.say(`[BOT] Self is ${client.self().name} and id is ${client.self().localPlayerId}!`)
 })
 
 client.raw().on('Block', args => {
@@ -16,7 +17,14 @@ client.raw().on('Block', args => {
 
 client.on('player:join', (player, new_join) => {
     if (!new_join) return
-    client.say(`[BOT] Hello, ${player.name?.toUpperCase()}!`)
+    client.say(`[BOT] Hello, ${player.name.toUpperCase()} (${player.localPlayerId})!`)
+})
+
+client.on('chat', (player, message, isPrivate) => {
+    if (message == '!help')
+        client.pm(player, '[BOT] !help !ping')
+    if (message == '!ping')
+        client.pm(player, '[BOT] Pong!')
 })
 
 // client.on('player:join', (player, new_join) => {

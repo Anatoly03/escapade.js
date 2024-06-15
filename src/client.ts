@@ -8,11 +8,12 @@ import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
+import ChatModule from './modules/chat.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
-import { Player } from './types/player.js'
+import { Player, SelfPlayer } from './types/player.js'
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
@@ -34,6 +35,7 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     #token: string
 
     #players: Player[] = []
+    #self: Player | undefined
 
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
     #events: EventEmitter<{}>
@@ -55,7 +57,8 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
         this.#events = new EventEmitter()
         this.#events_raw = new EventEmitter()
 
-        this.include(PlayerModule(this.#players))
+        this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
+        this.include(ChatModule())
     }
 
     /**
@@ -132,6 +135,13 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
      */
     public players(this: EscapadeClient<true, Magic>): Player[] {
         return this.#players
+    }
+
+    /**
+     * A reference of the self player object.
+     */
+    public self(this: EscapadeClient<true, Magic>): Player {
+        return this.#self as Player
     }
 
     /**

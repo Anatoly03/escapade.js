@@ -18,3 +18,9 @@ export class Player implements PlayerInfo {
         Object.keys(from).forEach((k: any) => (this[k as keyof Player] as any) = from[k as keyof PlayerInfo])
     }
 }
+
+export class SelfPlayer extends Player {
+    constructor(from: PlayerInfo = {}) {
+        super(from)
+    }
+}

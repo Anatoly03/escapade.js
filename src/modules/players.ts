@@ -1,20 +1,25 @@
 import { EscapadeClient } from "../client";
-import { Player } from "../types/player.js";
+import { Player, SelfPlayer } from "../types/player.js";
 
 /**
  * @todo
  */
-export default (players: Player[]) => (client: EscapadeClient<boolean, boolean>) => {
+export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) => (client: EscapadeClient<boolean, boolean>) => {
 
     /**
      * Add initial player into the array reference
      */
     client.raw().once('Init', ({ initArgs }: any) => {
+        const self = set_self(new SelfPlayer(initArgs.me))
+        players.push(self)
+
         for (const player of initArgs.players) {
+            if (player.localPlayerId === self.localPlayerId) continue
             players.push(new Player (player))
         }
 
         for (const player of players) {
+            if (player.localPlayerId === self.localPlayerId) continue
             client.emit('player:join', player, false)
         }
 
@@ -25,8 +30,11 @@ export default (players: Player[]) => (client: EscapadeClient<boolean, boolean>)
      * Add new player into the array reference
      */
     client.raw().on('Add', ({ addArgs }: any) => {
+        if (!client.connected()) return
+        if (players.some(p => p.localPlayerId == addArgs.localPlayerId)) return // Player already exists
         const player = new Player (addArgs)
         players.push(player)
+        if (player.localPlayerId === client.self().localPlayerId) return
         client.emit('player:join', player, true)
     })
 
