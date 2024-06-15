@@ -4,11 +4,13 @@
 
 #### Example
 
-```ts
+```js
 import EscapadeClient from 'pixelwalker.js'
 const client = new Client({ token: 'YOUR TOKEN HERE' })
 
-// TODO
+client.raw().once('Init', () => {
+    client.send('Sync')
+})
 
 await client.connect('WORLD ID')
 ```

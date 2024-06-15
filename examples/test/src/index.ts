@@ -5,12 +5,12 @@ import EscapadeClient from '../../../dist'
 const client = new EscapadeClient({ token: process.env.token } as any)
 // const worlds = await client.get('worlds')
 
-client.raw().on('Init', args => {
+client.raw().once('Init', args => {
     client.send('Sync')
 })
 
 // console.log(worlds)
-client.raw().on('*', console.log)
+// client.raw().on('*', console.log)
 
 // client.on('Chat', args => {
 //     console.log(args)

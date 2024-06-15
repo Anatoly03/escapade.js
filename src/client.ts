@@ -5,17 +5,13 @@ import { EventEmitter } from 'events'
 import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, JoinWorld, SendEventTypes } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, JoinWorld, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
+
+import PlayerModule from './modules/players.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
-
-interface CustomEvents {
-    '*': any[],
-    'error': [Error],
-    'close': [string]
-}
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
@@ -26,6 +22,8 @@ interface CustomEvents {
 export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
+
+    #players: PlayerInfo[] = []
 
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
     #events: EventEmitter<{}>
@@ -46,6 +44,8 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
         this.#token = args.token
         this.#events = new EventEmitter()
         this.#events_raw = new EventEmitter()
+
+        this.include(PlayerModule(this.#players))
     }
 
     /**
@@ -86,6 +86,18 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
      */
     public raw(): EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]}> {
         return this.#events_raw
+    }
+
+    /**
+     * @example
+     * 
+     * ```ts
+     * if (!client.connected()) return
+     * console.log('Players In World: ', client.players().map({ name } => name).join())
+     * ```
+     */
+    public players(this: EscapadeClient<true>): PlayerInfo[] {
+        return this.#players
     }
 
     /**
@@ -201,14 +213,27 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
     public async connect(world_id: string): Promise<Ready> {
         await this.try_refresh_token()
 
+        if (this.connected())
+            this.disconnect()
+
         this.#socket = new WebSocket(SOCKET_URL)
         this.#socket.binaryType = 'arraybuffer'
 
         this.#socket.on('open', async () => {
-            this.send('JoinWorld', {
+            const Message = EscapadeClient.protocol.lookupType('JoinWorld')
+            const Payload = {
                 worldId: world_id,
                 authToken: this.#token
-            })
+            }
+
+            const err = Message.verify(Payload)
+            if (err) throw new Error(err)
+
+            const data = Message.create(Payload)
+            const buffer = Message.encode(data).finish()
+
+            if (!this.#socket) throw new Error('Socket failed to open before `JoinWorld` message.')
+            this.#socket.send(buffer)
         })
 
         this.#socket.on('message', async (ev) => {
@@ -236,9 +261,11 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
     }
 
     /**
-     * @ignore
+     * @todo
      */
-    public send(message_type: 'JoinWorld', args: JoinWorld): this
+    disconnect() {
+        this.#socket?.close()
+    }
 
     /**
      * @todo
@@ -248,22 +275,13 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
 
     public send(message_type: string, payload: any = {}): this {
         if (!this.connected()) throw new Error('Socket is not connected!')
-        let Message: protobuf.Type
+        const Message = EscapadeClient.protocol.lookupType('WorldEvent')
+        const eventType: number = EscapadeClient.WorldEvents[message_type]
+        const attrs = WorldEventMatch[message_type]
+        const tmp = payload
         
-        switch (message_type) {
-            case 'JoinWorld':
-                Message = EscapadeClient.protocol.lookupType('JoinWorld')
-                break
-                
-            default:
-                const eventType: number = EscapadeClient.WorldEvents[message_type]
-                const attrs = WorldEventMatch[message_type]
-                const tmp = payload
-                Message = EscapadeClient.protocol.lookupType('WorldEvent')
-                payload = { eventType }
-                if (attrs && attrs.length > 0) payload[attrs[0]] = tmp
-                break
-        }
+        payload = { eventType }
+        if (attrs && attrs.length > 0) payload[attrs[0]] = tmp
 
         const err = Message.verify(payload)
         if (err) throw new Error(err)
@@ -275,7 +293,23 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
         return this
     }
 
+    /**
+     * @ignore @todo Include Event handler from another client instance. This function
+     * gets the event calls from `client` and a links them to `this`
+     */
+    public include<T>(callback: (c: EscapadeClient<boolean>) => EscapadeClient<boolean>): EscapadeClient<boolean>
 
+    /**
+     * @ignore
+     */
+    public include<T>(module: { module: (c: EscapadeClient<boolean>) => EscapadeClient<boolean> }): EscapadeClient<boolean>
+
+    public include<T>(callback: ((c: EscapadeClient<boolean>) => EscapadeClient<boolean>) | { module: (c: EscapadeClient<boolean>) => EscapadeClient<boolean> }): EscapadeClient<boolean> {
+        if (typeof callback == 'function')
+            return callback(this) || this
+        else
+            return callback.module(this)
+    }
 
 
 
