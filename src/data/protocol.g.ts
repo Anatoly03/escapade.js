@@ -29,7 +29,7 @@ export type WorldEvent = {
 	eventType: 1 | 21
 }
 
-export type InitArgs = {
+export interface InitArgs {
 	currentTime?: number
 	// world?: WorldInfo
 	me?: PlayerInfo
@@ -39,13 +39,13 @@ export type InitArgs = {
 	enabledOrangeSwitches?: number[]
 }
 
-export type ChatArgs = {
+export interface ChatArgs {
 	message: string
 	isPrivate: boolean
 	targetLocalPlayerId: number
 }
 
-export type PlayerInfo = {
+export interface PlayerInfo {
 	localPlayerId?: number
 	playerId?: string
 	name?: string
@@ -59,7 +59,7 @@ export type PlayerInfo = {
 	canEdit?: boolean
 }
 
-export type PlayerState = {
+export interface PlayerState {
 	moveArgs?: MoveArgs
 	respawnPoint?: [number, number]
 	completedLevel?: boolean
@@ -72,7 +72,7 @@ export type PlayerState = {
 	// team?: (typeof Team)[keyof typeof Team]
 }
 
-export type MoveArgs = {
+export interface MoveArgs {
 	tickDelta?: number
 	seed?: number
 	position?: [number, number]

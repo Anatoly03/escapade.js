@@ -215,7 +215,7 @@ let EventsWithoutArguments: [string, number][] = [];
             const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + EventsWithoutArguments.map(([k, v]) => v).join(' | ')
             TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
         } else {
-            TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n}\n`)
+            TypeScript.write(`\nexport interface ${key} {\n${TypeString}\n}\n`)
         }
 
         // for (const attr of MutualKeys) {

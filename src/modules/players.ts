@@ -1,20 +1,20 @@
 import { EscapadeClient } from "../client";
-import { PlayerInfo } from "../data/protocol.g";
+import { Player } from "../types/player.js";
 
 /**
  * @todo
  */
-export default (players: PlayerInfo[]) => (client: EscapadeClient<boolean>) => {
+export default (players: Player[]) => (client: EscapadeClient<boolean, boolean>) => {
 
     /**
      * Add initial player into the array reference
      */
     client.raw().once('Init', ({ initArgs }: any) => {
         for (const player of initArgs.players) {
-            players.push(player)
+            players.push(new Player (player))
         }
 
-        for (const player of initArgs.players) {
+        for (const player of players) {
             client.emit('player:join', player, false)
         }
     })
@@ -23,8 +23,9 @@ export default (players: PlayerInfo[]) => (client: EscapadeClient<boolean>) => {
      * Add new player into the array reference
      */
     client.raw().on('Add', ({ addArgs }: any) => {
-        players.push(addArgs)
-        client.emit('player:join', addArgs, true)
+        const player = new Player (addArgs)
+        players.push(player)
+        client.emit('player:join', player, true)
     })
 
     /**

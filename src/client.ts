@@ -5,25 +5,35 @@ import { EventEmitter } from 'events'
 import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, JoinWorld, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
+import { Player } from './types/player.js'
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
  * or not the game socket is connected. It is assumed by type
  * guard `EscapadeClient.connected()` which is true, if the
  * socket can send and receive events.
+ * 
+ * @param {boolean} Magic This type parameter can be set to perform
+ * a magic action, that is either undocumented or goes against the
+ * principles of the SDK, such as sending directly from the socket,
+ * ignoring all scheduling or otherwise activity.
+ * 
+ * @event Chat Test Docs
+ * 
+ * Test More
  */
-export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryEvents> {
+export class EscapadeClient<Ready extends boolean, Magic extends boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
-    #players: PlayerInfo[] = []
+    #players: Player[] = []
 
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
     #events: EventEmitter<{}>
@@ -61,15 +71,39 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
      * }
      * ```
      */
-    public connected(): this is EscapadeClient<true> {
+    public connected(): this is EscapadeClient<true, Magic> {
         return this.#socket !== undefined && this.#socket.readyState === this.#socket.OPEN
+    }
+
+    /**
+     * Turns on unsafe mode. Unsafe mode allows you to directly
+     * manipulate the contents of the SDK at the cost of possible
+     * conflicts with other functionalities such as the event
+     * scheduler or the socket connection.
+     * 
+     * The features that you can use during an unsafe scope are:
+     * - `client.socket()` Access the private socket variable.
+     * - `client.send()` Send a raw packet to the server.
+     * 
+     * @example
+     * 
+     * ```ts
+     * if (client.unsafe()) {
+     *     client.send('Chat', {
+     *         message: 'This message is evil.'
+     *     })
+     * }
+     * ```
+     */
+    public unsafe(): this is EscapadeClient<true, true> {
+        return this.connected()
     }
 
     /**
      * In environments, which is type guarded as connected,
      * retrieve the socket safely.
      */
-    private socket(this: EscapadeClient<true>): WebSocket {
+    private socket(this: EscapadeClient<true, true>): WebSocket {
         return this.#socket as WebSocket
     }
 
@@ -96,7 +130,7 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
      * console.log('Players In World: ', client.players().map({ name } => name).join())
      * ```
      */
-    public players(this: EscapadeClient<true>): PlayerInfo[] {
+    public players(this: EscapadeClient<true, Magic>): Player[] {
         return this.#players
     }
 
@@ -271,9 +305,9 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
      * @todo
      */
     public send<EventName extends keyof SendEventTypes>
-        (message_type: EventName, args?: SendEventTypes[EventName]): this
+        (this: EscapadeClient<true, true>, message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true, true>
 
-    public send(message_type: string, payload: any = {}): this {
+    public send(this: EscapadeClient<true, true>, message_type: string, payload: any = {}): EscapadeClient<true, true> {
         if (!this.connected()) throw new Error('Socket is not connected!')
         const Message = EscapadeClient.protocol.lookupType('WorldEvent')
         const eventType: number = EscapadeClient.WorldEvents[message_type]
@@ -297,14 +331,14 @@ export class EscapadeClient<Ready extends boolean> extends EventEmitter<LibraryE
      * @ignore @todo Include Event handler from another client instance. This function
      * gets the event calls from `client` and a links them to `this`
      */
-    public include<T>(callback: (c: EscapadeClient<boolean>) => EscapadeClient<boolean>): EscapadeClient<boolean>
+    public include<T>(callback: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean>): EscapadeClient<boolean, boolean>
 
     /**
      * @ignore
      */
-    public include<T>(module: { module: (c: EscapadeClient<boolean>) => EscapadeClient<boolean> }): EscapadeClient<boolean>
+    public include<T>(module: { module: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean> }): EscapadeClient<boolean, boolean>
 
-    public include<T>(callback: ((c: EscapadeClient<boolean>) => EscapadeClient<boolean>) | { module: (c: EscapadeClient<boolean>) => EscapadeClient<boolean> }): EscapadeClient<boolean> {
+    public include<T>(callback: ((c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean>) | { module: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean> }): EscapadeClient<boolean, boolean> {
         if (typeof callback == 'function')
             return callback(this) || this
         else

@@ -6,18 +6,28 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 // const worlds = await client.get('worlds')
 
 client.raw().once('Init', args => {
+    if (!client.unsafe()) return
     client.send('Sync')
 })
 
 client.on('player:join', (player, new_join) => {
     if (!new_join) return
+    if (!client.unsafe()) return
     client.send('Chat', {
         message: `[BOT] Hello, ${player.name?.toUpperCase()}!`
     })
 })
 
+client.on('player:join', (player, new_join) => {
+    if (!client.unsafe()) return
+    client.send('CanEditChange', {
+        canEdit: true
+    })
+    console.log('Gave Edit:', player.name)
+})
+
 // console.log(worlds)
-// client.raw().on('*', console.log)
+client.raw().on('*', console.log)
 
 // client.on('Chat', args => {
 //     console.log(args)
