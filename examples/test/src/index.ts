@@ -9,6 +9,13 @@ client.raw().once('Init', args => {
     client.send('Sync')
 })
 
+client.on('player:join', (player, new_join) => {
+    if (!new_join) return
+    client.send('Chat', {
+        message: `[BOT] Hello, ${player.name?.toUpperCase()}!`
+    })
+})
+
 // console.log(worlds)
 // client.raw().on('*', console.log)
 

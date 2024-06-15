@@ -13,6 +13,10 @@ export default (players: PlayerInfo[]) => (client: EscapadeClient<boolean>) => {
         for (const player of initArgs.players) {
             players.push(player)
         }
+
+        for (const player of initArgs.players) {
+            client.emit('player:join', player, false)
+        }
     })
 
     /**
@@ -20,6 +24,7 @@ export default (players: PlayerInfo[]) => (client: EscapadeClient<boolean>) => {
      */
     client.raw().on('Add', ({ addArgs }: any) => {
         players.push(addArgs)
+        client.emit('player:join', addArgs, true)
     })
 
     /**
@@ -28,6 +33,7 @@ export default (players: PlayerInfo[]) => (client: EscapadeClient<boolean>) => {
     client.raw().on('Leave', ({ issuerLocalPlayerId }: any) => {
         const index = players.findIndex(p => p.localPlayerId == issuerLocalPlayerId)
         if (index < 0) return
+        client.emit('player:leave', players[index])
         players.splice(index, 1)
     })
 

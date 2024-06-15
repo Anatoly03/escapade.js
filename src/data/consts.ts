@@ -1,3 +1,4 @@
+import { PlayerInfo } from "./protocol.g"
 
 export const ESCAPADE_URL = 'https://escapade.fun'
 export const ESCAPADE_API = 'https://escapade.fun:2053/api'
@@ -7,4 +8,6 @@ export interface LibraryEvents {
     'close': [string]
     'start': []
     'error': [Error]
+    'player:join': [PlayerInfo, boolean]
+    'player:leave': [PlayerInfo]
 }
