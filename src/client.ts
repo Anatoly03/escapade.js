@@ -5,7 +5,7 @@ import { EventEmitter } from 'events'
 import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
 
@@ -419,9 +419,10 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
      * client.pm(user, 'Hello, World!')
      * ```
      */
-    public async pm(target: PlayerInfo, message: string): Promise<true>
+    public async pm(target: Player, message: string): Promise<true>
 
     /**
+     * @deprecated Not Yet Implemented
      * @todo @example
      * 
      * ```ts
@@ -439,8 +440,14 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
      */
     public async pm(target_id: number, message: string): Promise<true>
 
-    public async pm(...args: any[]) {
-        throw new Error('Not Implemented!')
+    public async pm(target: number | string | Player, message: string) {
+        if (typeof target == 'object')
+            target = (target as Player).localPlayerId
+        else if (typeof target == 'string')
+            throw new Error('`pm(username, message)` Is Not Yet Implemented!')
+
+        if (!this.unsafe()) throw new Error('Client not connected.')
+        this.send('Chat', { message, isPrivate: true, targetLocalPlayerId: target })
         return true
     }
 }
