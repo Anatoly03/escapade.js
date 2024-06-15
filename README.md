@@ -5,7 +5,7 @@
 #### Example
 
 ```js
-import EscapadeClient from 'pixelwalker.js'
+import EscapadeClient from 'escapade.js'
 const client = new Client({ token: 'YOUR TOKEN HERE' })
 
 client.once('start', () => {
