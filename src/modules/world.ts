@@ -26,7 +26,7 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient<b
 
         const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId) as Player
         
-        const block = new Block(blockArgs)
+        const block = new Block<true>(blockArgs)
         const previous_block = client.world()
             .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0]
 
