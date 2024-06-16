@@ -100,13 +100,13 @@ export class Block<Positional extends boolean = false> {
     public place(this: Block<true>, client: EscapadeClient<true>) {
         if (!client.connected()) return false // Error
 
-        return client.send('Block', {
-            blockId: this.id,
+        client.send('Block', {
             x: this.x,
             y: this.y,
+            blockId: this.id,
             layer: this.layer,
-            intArgs: [],
-            stringArgs: []
+            // intArgs: [],
+            // stringArgs: [],
         })
     }
 }

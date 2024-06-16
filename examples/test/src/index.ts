@@ -29,7 +29,7 @@ client.on('block', (p, b) => {
     if (snake.includes(b.id) && b.id !== 0) {
         const next_block = new Block(snake[snake.findIndex(v => b.id == v) + 1])
         next_block.at(b).place(client)
-        console.log(b, next_block.at(b))
+        // console.log(b, next_block.at(b))
     }
 
     console.log(`${p.name} placed a block ${b.id} (${b.layer}) at (${b.pos().x}, ${b.pos().y})`)
@@ -44,16 +44,17 @@ client.raw().on('Move', ({ issuerLocalPlayerId, moveArgs }) => {
 })
 
 client.on('player:join', (player, new_join) => {
-    client.say(`/edit ${player.name}`)
     if (!new_join) return
-    client.say(`[BOT] Hello, ${player.name?.toUpperCase() ?? '??'} (${player.localPlayerId})!`)
+    client.say(`[BOT] Hello, ${player.name?.toUpperCase() ?? '??'} (${player.localPlayerId})! Say !edit`)
 })
 
 client.on('chat', (player, message, isPrivate) => {
     if (message == '!help')
-        client.pm(player, '[BOT] !help !ping')
+        client.pm(player, '[BOT] !help !ping !edit')
     else if (message == '!ping')
         client.pm(player, '[BOT] Pong!')
+    else if (message == '!edit')
+        client.say(`/edit ${player.name}`)
     else if (message == '!blocks') {
         if (!client.connected()) return
         const blocks = client.world().foreground.flat().filter(b => b)

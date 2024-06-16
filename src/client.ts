@@ -344,6 +344,9 @@ export class EscapadeClient<Ready extends boolean = boolean, Magic extends boole
         const err = Message.verify(payload)
         if (err) throw new Error(err)
 
+        // if (eventType == 13 || eventType == 23)
+        //     console.log(payload)
+
         const data = Message.create(payload)
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
