@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import EscapadeClient from '../../../dist'
+import { Block } from '../../../dist/types/block'
 // import protobuf from 'protobufjs'
 
 const client = new EscapadeClient({ token: process.env.token } as any)
@@ -21,7 +22,17 @@ client.once('start', () => {
 })
 
 client.on('block', (p, b) => {
-    console.log(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
+    if (!client.connected()) return
+
+    const snake = [70, 76, 75, 74, 73, 72, 71, 0]
+
+    if (snake.includes(b.id) && b.id !== 0) {
+        const next_block = new Block(snake[snake.findIndex(v => b.id == v) + 1])
+        next_block.at(b).place(client)
+        console.log(b, next_block.at(b))
+    }
+
+    console.log(`${p.name} placed a block ${b.id} (${b.layer}) at (${b.pos().x}, ${b.pos().y})`)
     // client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
 })
 

@@ -70,14 +70,14 @@ export class World {
      * 
      */
     get foreground(): Block<true>[][] {
-        return this.#data[1]
+        return this.#data[0]
     }
 
     /**
      * 
      */
     get background(): Block<true>[][] {
-        return this.#data[0]
+        return this.#data[1]
     }
 
     /**

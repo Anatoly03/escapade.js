@@ -1,10 +1,12 @@
+import { EscapadeClient } from "../client"
 import { BlockArgs } from "../data/protocol.g"
 
 export class Block<Positional extends boolean = false> {
     public id: number
-
-    private x: number | undefined
-    private y: number | undefined
+    
+    public layer: Positional extends true ? (0 | 1 | undefined) : never
+    public x: Positional extends true ? (number | undefined) : never
+    public y: Positional extends true ? (number | undefined) : never
 
     /**
      * The empty block (air)
@@ -48,6 +50,7 @@ export class Block<Positional extends boolean = false> {
             throw new Error('Not Implemented!')
 
         this.id = (<Block>args).id ?? (<BlockArgs>args).blockId ?? 0
+        this.layer = (<BlockArgs>args).layer as any
         this.x = (<any>args).x
         this.y = (<any>args).y
     }
@@ -58,7 +61,7 @@ export class Block<Positional extends boolean = false> {
      * directly as an event.
      */
     public isPositioned(): this is Block<true> {
-        return this.x !== undefined && this.y !== undefined
+        return this.x !== undefined && this.y !== undefined && this.layer !== undefined
     }
 
     /**
@@ -67,7 +70,7 @@ export class Block<Positional extends boolean = false> {
      * equal, but two signs given the same coordinate with different
      * strings are not.
      */
-    public equals(other: Block): boolean {
+    public equals<V extends boolean>(other: Block<V>): boolean {
         if (other === undefined) return this.id == 0
         // TODO add other custom data (int and string arguments)
         return this.id == other.id
@@ -76,17 +79,34 @@ export class Block<Positional extends boolean = false> {
     /**
      * Create a new block instance that is tied to a position in world.
      */
-    public at(x: number, y: number): Block<true> {
-        const block = new Block(this)
-        block.x = x
-        block.y = y
+    public at(args: {x?: number, y?: number, layer?: 0 | 1}): Block<true> {
+        const block = new Block(this) as any
+        block.x = args.x ?? 0
+        block.y = args.y ?? 0
+        block.layer = args.layer ?? 0
         return block as Block<true>
     }
 
     /**
      * Get the position vector of the current block
      */
-    public pos(this: Block<true>): {x: number, y: number} {
-        return {x: this.x as number, y: this.y as number}
+    public pos(this: Block<true>): {x: number, y: number, layer: number} {
+        return {x: this.x as number, y: this.y as number, layer: this.layer as number}
+    }
+
+    /**
+     * Place a block, given a connected client.
+     */
+    public place(this: Block<true>, client: EscapadeClient<true>) {
+        if (!client.connected()) return false // Error
+
+        return client.send('Block', {
+            blockId: this.id,
+            x: this.x,
+            y: this.y,
+            layer: this.layer,
+            intArgs: [],
+            stringArgs: []
+        })
     }
 }
