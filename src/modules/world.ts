@@ -1,6 +1,7 @@
 import { EscapadeClient } from "../client.js";
 import { BlockArgs, WorldInfo } from "../data/protocol.g.js";
 import { Block } from "../types/block.js";
+import { Player } from "../types/player.js";
 import { World } from "../types/world.js";
 
 /**
@@ -23,13 +24,16 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient<b
     client.raw().on('Block', ({ issuerLocalPlayerId, blockArgs }: any) => {
         if (!client.unsafe()) throw new Error('Could not connect Player Manager.')
 
-        const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId)
+        const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId) as Player
+        
         const block = new Block(blockArgs)
-
-        if (!player) return
+        const previous_block = client.world()
+            .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0]
 
         client.world()
             .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0] = new Block(blockArgs)
+
+        if (block.equals(previous_block)) return
 
         client.emit('block', player, block)
     })

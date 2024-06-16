@@ -21,7 +21,8 @@ client.once('start', () => {
 })
 
 client.on('block', (p, b) => {
-    client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
+    console.log(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
+    // client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
 })
 
 client.raw().on('Move', ({ issuerLocalPlayerId, moveArgs }) => {

@@ -62,6 +62,15 @@ export class Block<Positional extends boolean = false> {
     }
 
     /**
+     * Are two blocks equal
+     */
+    public equals(other: Block): boolean {
+        if (other === undefined) return this.id == 0
+        // TODO add other custom data (int and string arguments)
+        return this.id == other.id
+    }
+
+    /**
      * Create a new block instance that is tied to a position in world.
      */
     public at(x: number, y: number): Block<true> {
