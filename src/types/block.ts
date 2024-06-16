@@ -62,7 +62,10 @@ export class Block<Positional extends boolean = false> {
     }
 
     /**
-     * Are two blocks equal
+     * Returns wether or not two blocks are equal with their content,
+     * for example two basic blocks with different positions are
+     * equal, but two signs given the same coordinate with different
+     * strings are not.
      */
     public equals(other: Block): boolean {
         if (other === undefined) return this.id == 0
