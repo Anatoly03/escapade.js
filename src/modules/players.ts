@@ -10,7 +10,9 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) =
      * Add initial player into the array reference
      */
     client.raw().once('Init', ({ initArgs }: any) => {
-        const self = set_self(new SelfPlayer(initArgs.me))
+        if (!client.unsafe()) throw new Error('Could not connect Player Manager.')
+
+        const self = set_self(new SelfPlayer(initArgs.me, client))
         players.push(self)
 
         for (const player of initArgs.players) {

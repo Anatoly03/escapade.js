@@ -12,12 +12,18 @@ export type JoinWorld = {
 export enum WorldEventType {
     Init = 0,
     Sync = 1,
+	Block = 13,
 	Add = 20,
 	Leave = 21,
 	Chat = 23,
+    Move = 40,
 }
 
 export type WorldEvent = {
+	blockArgs: BlockArgs
+	eventType: 13
+	issuerLocalPlayerId: number
+} | {
 	chatArgs: ChatArgs
 	eventType: 23
 	issuerLocalPlayerId: number
@@ -32,12 +38,23 @@ export type WorldEvent = {
 
 export interface InitArgs {
 	currentTime?: number
-	// world?: WorldInfo
+	world?: WorldInfo
 	me?: PlayerInfo
 	players?: PlayerInfo[]
 	crownedPlayerId?: number
 	// keyStates?: KeyState[]
 	enabledOrangeSwitches?: number[]
+}
+
+export interface WorldInfo {
+	width?: number
+	height?: number
+	deflatedWorldData?: Uint8Array
+	ownerId?: string
+	ownerName?: string
+	updatedFields?: 0 | 1 | 2
+	worldTitle?: string
+	mapHidden?: boolean
 }
 
 export interface ChatArgs {
@@ -76,16 +93,40 @@ export interface PlayerState {
 export interface MoveArgs {
 	tickDelta?: number
 	seed?: number
-	position?: [number, number]
-	direction?: [number, number]
-	velocity?: [number, number]
+	position?: { x?: number, y?: number }
+	direction?: { x?: number, y?: number }
+	velocity?: { x?: number, y?: number }
 	isJumping?: boolean
 	isGod?: boolean
+}
+
+export interface WorldData {
+	blockEntries?: BlockEntry[]
+}
+
+export interface BlockEntry {
+	xs?: Uint8Array
+	ys?: Uint8Array
+	blockId?: number
+	layer?: 0 | 1
+	intArgs?: number[]
+	stringArgs?: string[]
+}
+
+export interface BlockArgs {
+	x?: number
+	y?: number
+	blockId?: number
+	layer?: 0 | 1
+	intArgs?: number[]
+	stringArgs?: string[]
 }
 
 export type SendEventTypes = {
     // Init: {},
     Sync: {},
+	Block: BlockArgs
 	Leave: {},
-    Chat: ChatArgs
+    Chat: ChatArgs,
+    Move: MoveArgs
 }

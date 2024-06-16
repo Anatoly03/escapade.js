@@ -1,10 +1,11 @@
 
+import { EscapadeClient } from '../client.js'
 import { PlayerInfo, PlayerState } from '../data/protocol.g.js'
 
 export class Player implements PlayerInfo {
     localPlayerId = 0
     playerId = 'undeclared'
-    name = 'UNKNOWN'
+    name : string | undefined
     smileyId = 0
     auraShapeId = 0
     auraColorId = 0
@@ -20,7 +21,17 @@ export class Player implements PlayerInfo {
 }
 
 export class SelfPlayer extends Player {
-    constructor(from: PlayerInfo = {}) {
+    #client: EscapadeClient<true, true>
+    constructor(from: PlayerInfo = {}, client: EscapadeClient<true, true>) {
         super(from)
+        this.#client = client
     }
+
+    /**
+     * @param isGod Set god mode on or off
+     */
+    public set_god(isGod: boolean) {
+        this.#client.send('Move', { isGod })
+    }
+
 }

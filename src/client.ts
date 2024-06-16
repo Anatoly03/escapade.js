@@ -8,12 +8,14 @@ import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
+import WorldModule from './modules/world.js'
 import ChatModule from './modules/chat.js'
 
 import { Friend } from './types/friend.js'
 import { Profile } from './types/profile.js'
 import { WorldMeta } from './types/world-meta.js'
 import { Player, SelfPlayer } from './types/player.js'
+import { World } from './types/world.js'
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
@@ -30,12 +32,13 @@ import { Player, SelfPlayer } from './types/player.js'
  * 
  * Test More
  */
-export class EscapadeClient<Ready extends boolean, Magic extends boolean> extends EventEmitter<LibraryEvents> {
+export class EscapadeClient<Ready extends boolean = boolean, Magic extends boolean = boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
     #players: Player[] = []
     #self: Player | undefined
+    #world: World | undefined
 
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
 
@@ -56,6 +59,7 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
         this.#events_raw = new EventEmitter()
 
         this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
+        this.include(WorldModule((value: World) => this.#world = value))
         this.include(ChatModule())
     }
 
@@ -138,8 +142,15 @@ export class EscapadeClient<Ready extends boolean, Magic extends boolean> extend
     /**
      * A reference of the self player object.
      */
-    public self(this: EscapadeClient<true, Magic>): Player {
-        return this.#self as Player
+    public self(this: EscapadeClient<true, Magic>): SelfPlayer {
+        return this.#self as SelfPlayer
+    }
+
+    /**
+     * A reference of the world object.
+     */
+    public world(this: EscapadeClient<true, Magic>): World {
+        return this.#world as World
     }
 
     /**

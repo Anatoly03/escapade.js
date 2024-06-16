@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "fflate": "^0.8.2",
     "protobufjs": "^7.3.0",
     "ws": "^8.17.0",
     "yaml": "^2.4.1"

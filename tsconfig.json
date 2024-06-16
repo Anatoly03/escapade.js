@@ -109,5 +109,5 @@
   },
   "include": [
     "src/"
-  ]
+, "../escapade_test/src/ring_queue.ts"  ]
 }

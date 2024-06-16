@@ -3,28 +3,50 @@ import EscapadeClient from '../../../dist'
 // import protobuf from 'protobufjs'
 
 const client = new EscapadeClient({ token: process.env.token } as any)
+
+// client.world()
+
+// client.self()
 // const worlds = await client.get('worlds')
 
 client.once('start', () => {
     if (!client.connected()) return
     client.sync()
     client.say(`[BOT] Self is ${client.self().name} and id is ${client.self().localPlayerId}!`)
+    client.self().set_god(true)
+
+    // client.send('AuraChange', {
+    //     g: ''
+    // })
 })
 
-client.raw().on('Block', args => {
-    console.log(args)
+client.on('block', (p, b) => {
+    client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
+})
+
+client.raw().on('Move', ({ issuerLocalPlayerId, moveArgs }) => {
+    if (!client.unsafe()) return
+    if (issuerLocalPlayerId === client.self().localPlayerId) return
+
+    client.send('Move', moveArgs)
 })
 
 client.on('player:join', (player, new_join) => {
+    client.say(`/edit ${player.name}`)
     if (!new_join) return
-    client.say(`[BOT] Hello, ${player.name.toUpperCase()} (${player.localPlayerId})!`)
+    client.say(`[BOT] Hello, ${player.name?.toUpperCase() ?? '??'} (${player.localPlayerId})!`)
 })
 
 client.on('chat', (player, message, isPrivate) => {
     if (message == '!help')
         client.pm(player, '[BOT] !help !ping')
-    if (message == '!ping')
+    else if (message == '!ping')
         client.pm(player, '[BOT] Pong!')
+    else if (message == '!blocks') {
+        if (!client.connected()) return
+        const blocks = client.world().foreground.flat().filter(b => b)
+        client.pm(player, `There are ${blocks.length} blocks in the foreground.`)
+    }
 })
 
 // client.on('player:join', (player, new_join) => {
@@ -51,13 +73,3 @@ client.on('chat', (player, message, isPrivate) => {
 // })
 
 await client.connect('k7HdYhzHzLML')
-
-// await new Promise(res => setTimeout(res, 200))
-// client.send('Chat', {
-//     message: '[BOT] Hello, World!'
-// })
-
-
-// the following is loading a string.
-// in a real application, it'd be more like protobuf.load("traverse-types.proto", ...)
-
