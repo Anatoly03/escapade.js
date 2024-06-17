@@ -32,7 +32,7 @@ import { World } from './types/world.js'
  * 
  * Test More
  */
-export class EscapadeClient<Ready extends boolean = boolean, Magic extends boolean = boolean> extends EventEmitter<LibraryEvents> {
+orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boolean = boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
@@ -307,7 +307,13 @@ export class EscapadeClient<Ready extends boolean = boolean, Magic extends boole
         })
 
         this.#socket.on('error', async (err) => {
+            this.disconnect()
             this.emit<'error'>('error', err)
+        })
+
+        this.#socket.on('unexpected-response', (request, response) => {
+            this.disconnect()
+            this.emit<'error'>('error', new Error(`Unexpected Response from host ${request.protocol}://${request.host}/${request.path} with status code ${response.statusCode}. ${response.statusMessage ?? ''}`))
         })
 
         return this.connected() as Ready
@@ -319,8 +325,8 @@ export class EscapadeClient<Ready extends boolean = boolean, Magic extends boole
     disconnect(): void {
         if (this.unsafe()) {
             this.send('Leave')
-            this.#socket?.close()
         }
+        this.#socket?.close()
     }
 
     /**

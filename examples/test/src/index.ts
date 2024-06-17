@@ -10,10 +10,16 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 // client.self()
 // const worlds = await client.get('worlds')
 
+client.once('close', (reason) => {
+    console.log('Disconnected! ', reason)
+})
+
+
 client.once('start', () => {
     if (!client.connected()) return
     client.sync()
     client.say(`[BOT] Self is ${client.self().name} and id is ${client.self().localPlayerId}!`)
+    console.log('Connected!')
     client.self().set_god(true)
 
     // client.send('AuraChange', {
