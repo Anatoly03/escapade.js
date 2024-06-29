@@ -16,7 +16,7 @@ export class World {
     
     #data: Block<true>[][][]
 
-    constructor(from: WorldInfo, client: EscapadeClient<boolean, boolean>) {
+    constructor(from: WorldInfo, client: EscapadeClient) {
         this.width = from.width ?? 0
         this.height = from.height ?? 0
 

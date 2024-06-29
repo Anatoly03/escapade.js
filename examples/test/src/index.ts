@@ -10,10 +10,9 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 // client.self()
 // const worlds = await client.get('worlds')
 
-client.once('close', (reason) => {
-    console.log('Disconnected! ', reason)
-})
-
+// client.once('close', (reason) => {
+//     console.log('Disconnected! ', reason)
+// })
 
 client.once('start', () => {
     if (!client.connected()) return
@@ -27,46 +26,46 @@ client.once('start', () => {
     // })
 })
 
-client.on('block', (p, b) => {
-    if (!client.connected()) return
+// client.on('block', (p, b) => {
+//     if (!client.connected()) return
 
-    const snake = [70, 76, 75, 74, 73, 72, 71, 0]
+//     const snake = [70, 76, 75, 74, 73, 72, 71, 0]
 
-    if (snake.includes(b.id) && b.id !== 0) {
-        const next_block = new Block(snake[snake.findIndex(v => b.id == v) + 1])
-        next_block.at(b).place(client)
-        // console.log(b, next_block.at(b))
-    }
+//     if (snake.includes(b.id) && b.id !== 0) {
+//         const next_block = new Block(snake[snake.findIndex(v => b.id == v) + 1])
+//         next_block.at(b).place(client)
+//         // console.log(b, next_block.at(b))
+//     }
 
-    console.log(`${p.name} placed a block ${b.id} (${b.layer}) at (${b.pos().x}, ${b.pos().y})`)
-    // client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
-})
+//     console.log(`${p.name} placed a block ${b.id} (${b.layer}) at (${b.pos().x}, ${b.pos().y})`)
+//     // client.say(`${p.name} placed a block at (${b.pos().x}, ${b.pos().y})`)
+// })
 
-client.raw().on('Move', ({ issuerLocalPlayerId, moveArgs }) => {
-    if (!client.unsafe()) return
-    if (issuerLocalPlayerId === client.self().localPlayerId) return
+// client.raw().on('Move', ({ issuerLocalPlayerId, moveArgs }) => {
+//     if (!client.connected()) return
+//     if (issuerLocalPlayerId === client.self().localPlayerId) return
 
-    client.send('Move', moveArgs)
-})
+//     client.send('Move', moveArgs)
+// })
 
-client.on('player:join', (player, new_join) => {
-    if (!new_join) return
-    client.say(`[BOT] Hello, ${player.name?.toUpperCase() ?? '??'} (${player.localPlayerId})! Say !edit`)
-})
+// client.on('player:join', (player, new_join) => {
+//     if (!new_join) return
+//     client.say(`[BOT] Hello, ${player.name?.toUpperCase() ?? '??'} (${player.localPlayerId})! Say !edit`)
+// })
 
-client.on('chat', (player, message, isPrivate) => {
-    if (message == '!help')
-        client.pm(player, '[BOT] !help !ping !edit')
-    else if (message == '!ping')
-        client.pm(player, '[BOT] Pong!')
-    else if (message == '!edit')
-        client.say(`/edit ${player.name}`)
-    else if (message == '!blocks') {
-        if (!client.connected()) return
-        const blocks = client.world().foreground.flat().filter(b => b)
-        client.pm(player, `There are ${blocks.length} blocks in the foreground.`)
-    }
-})
+// client.on('chat', (player, message, isPrivate) => {
+//     if (message == '!help')
+//         client.pm(player, '[BOT] !help !ping !edit')
+//     else if (message == '!ping')
+//         client.pm(player, '[BOT] Pong!')
+//     else if (message == '!edit')
+//         client.say(`/edit ${player.name}`)
+//     else if (message == '!blocks') {
+//         if (!client.connected()) return
+//         const blocks = client.world().foreground.flat().filter(b => b)
+//         client.pm(player, `There are ${blocks.length} blocks in the foreground.`)
+//     }
+// })
 
 // client.on('player:join', (player, new_join) => {
 //     if (!client.unsafe()) return

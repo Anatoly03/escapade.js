@@ -3,7 +3,7 @@ import { EscapadeClient } from "../client"
 /**
  * @todo
  */
-export default () => (client: EscapadeClient<boolean, boolean>) => {
+export default () => (client: EscapadeClient) => {
 
     /**
      * Chat message was sent.

@@ -32,7 +32,7 @@ import { World } from './types/world.js'
  * 
  * Test More
  */
-orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boolean = boolean> extends EventEmitter<LibraryEvents> {
+export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
@@ -43,16 +43,28 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
     #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
 
     /**
+     * Create a new Escapade Client instance, by logging in with a token.
+     * @param {{token:string}} args The object holding the token which is used to sign into pocketbase.
      * @example
      * Create an Escapade Client with login information using the dotenv package.
-     * 
      * ```ts
      * import 'dotenv/config'
-     * const client = new EscapadeClient({ token: process.env.token } as any)
+     * const client = new EscapadeClient({ token: process.env.TOKEN as string })
      * ```
-     * 
-     * @param args Login Information
      */
+    constructor(args: { token: string });
+
+    /**
+     * Create a new Escapade Client instance, by logging in with data defined in the 
+     * @param {NodeJS.ProcessEnv} args The constant `process.env`
+     * @example
+     * ```ts
+     * import 'dotenv/config'
+     * const client = new EscapadeClient(process.env)
+     * ```
+     */
+    constructor(args: NodeJS.ProcessEnv);
+
     constructor(args: { token: string }) {
         super()
         this.#token = args.token
@@ -76,39 +88,15 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * }
      * ```
      */
-    public connected(): this is EscapadeClient<true, Magic> {
+    public connected(): this is EscapadeClient<true> {
         return this.#socket !== undefined && this.#socket.readyState === this.#socket.OPEN
-    }
-
-    /**
-     * Turns on unsafe mode. Unsafe mode allows you to directly
-     * manipulate the contents of the SDK at the cost of possible
-     * conflicts with other functionalities such as the event
-     * scheduler or the socket connection.
-     * 
-     * The features that you can use during an unsafe scope are:
-     * - `client.socket()` Access the private socket variable.
-     * - `client.send()` Send a raw packet to the server.
-     * 
-     * @example
-     * 
-     * ```ts
-     * if (client.unsafe()) {
-     *     client.send('Chat', {
-     *         message: 'This message is evil.'
-     *     })
-     * }
-     * ```
-     */
-    public unsafe(): this is EscapadeClient<true, true> {
-        return this.connected()
     }
 
     /**
      * In environments, which is type guarded as connected,
      * retrieve the socket safely.
      */
-    private socket(this: EscapadeClient<true, true>): WebSocket {
+    public socket(this: EscapadeClient<true>): WebSocket {
         return this.#socket as WebSocket
     }
 
@@ -135,21 +123,21 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * console.log('Players In World: ', client.players().map({ name } => name).join())
      * ```
      */
-    public players(this: EscapadeClient<true, Magic>): Player[] {
+    public players(this: EscapadeClient<true>): Player[] {
         return this.#players
     }
 
     /**
      * A reference of the self player object.
      */
-    public self(this: EscapadeClient<true, Magic>): SelfPlayer {
+    public self(this: EscapadeClient<true>): SelfPlayer {
         return this.#self as SelfPlayer
     }
 
     /**
      * A reference of the world object.
      */
-    public world(this: EscapadeClient<true, Magic>): World {
+    public world(this: EscapadeClient<true>): World {
         return this.#world as World
     }
 
@@ -225,8 +213,6 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
                 Authorization: 'Bearer ' + this.#token
             }
         })
-
-        // console.log('Refreshing Token')
 
         switch (response.status) {
             case 400:
@@ -323,21 +309,18 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * Disconnects the client, and if in the world, leave.
      */
     disconnect(): void {
-        if (this.unsafe()) {
-            this.send('Leave')
-        }
+        this.send('Leave')
         this.#socket?.close()
     }
 
     /**
      * @todo
-     * @deprecated This will soon require UNSAFE FLAG to be executed.
      */
     // TODO add `this: EscapadeClient<true, true>, ` type guard in param
     public send<EventName extends keyof SendEventTypes>
-        (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true, true>
+        (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true>
 
-    public send(message_type: string, payload: any = {}): EscapadeClient<true, true> {
+    public send(message_type: string, payload: any = {}): EscapadeClient<true> {
         if (!this.connected()) throw new Error('Socket is not connected!')
         const Message = EscapadeClient.protocol.lookupType('WorldEvent')
         const eventType: number = EscapadeClient.WorldEvents[message_type]
@@ -364,14 +347,14 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * @ignore @todo Include Event handler from another client instance. This function
      * gets the event calls from `client` and a links them to `this`
      */
-    public include<T>(callback: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean>): EscapadeClient<boolean, boolean>
+    public include<K>(callback: (c: EscapadeClient) => EscapadeClient): EscapadeClient
 
     /**
      * @ignore
      */
-    public include<T>(module: { module: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean> }): EscapadeClient<boolean, boolean>
+    public include<K>(module: { module: (c: EscapadeClient) => EscapadeClient }): EscapadeClient
 
-    public include<T>(callback: ((c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean>) | { module: (c: EscapadeClient<boolean, boolean>) => EscapadeClient<boolean, boolean> }): EscapadeClient<boolean, boolean> {
+    public include<K>(callback: ((c: EscapadeClient) => EscapadeClient) | { module: (c: EscapadeClient) => EscapadeClient }): EscapadeClient {
         if (typeof callback == 'function')
             return callback(this) || this
         else
@@ -421,7 +404,7 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * ```
      */
     public sync() {
-        if (!this.unsafe()) throw new Error('Client not connected.')
+        if (!this.connected()) throw new Error('Client not connected.')
         this.send('Sync')
     }
 
@@ -435,7 +418,7 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
      * ```
      */
     public async say(message: string): Promise<true> {
-        if (!this.unsafe()) throw new Error('Client not connected.')
+        if (!this.connected()) throw new Error('Client not connected.')
         this.send('Chat', { message })
         return true
     }
@@ -474,7 +457,7 @@ orexport class EscapadeClient<Ready extends boolean = boolean, Magic extends boo
         else if (typeof target == 'string')
             throw new Error('`pm(username, message)` Is Not Yet Implemented!')
 
-        if (!this.unsafe()) throw new Error('Client not connected.')
+        if (!this.connected()) throw new Error('Client not connected.')
         this.send('Chat', { message, isPrivate: true, targetLocalPlayerId: target })
         return true
     }
