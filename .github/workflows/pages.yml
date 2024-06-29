@@ -1,3 +1,6 @@
+
+# https://gist.github.com/mikroskeem/fddaf7a4f80959d6e5f4711904885fae
+
 name: "Publish documentation"
 on:
   push:
@@ -30,20 +33,19 @@ jobs:
       - id: "setup-node"
         name: "Set up Node.js"
         uses: "actions/setup-node@v3"
-        with:
-          node-version-file: ".nvmrc"
-          cache: "pnpm"
 
       - id: "install-dependencies"
         name: "Install Node.js dependencies"
         run: |
           set -euo pipefail
-          pnpm install --frozen-lockfile
+          npm install --frozen-lockfile
+
       - id: "build"
         name: "Build documentation"
         run: |
           set -euo pipefail
-          pnpm run build:doc
+          npm run docs
+
       - id: "upload-documentation"
         name: "Upload Pages artifact"
         uses: "actions/upload-pages-artifact@v2"
