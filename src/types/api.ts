@@ -2,7 +2,7 @@
 /**
  * The interface Friend. It only stored the player id, name and smiley id.
  */
-export interface Friend {
+export interface ProfileMeta {
     player_id: string
     name: string
     smiley_id: number

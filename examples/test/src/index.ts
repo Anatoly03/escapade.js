@@ -22,7 +22,7 @@ client.once('Init', ({ initArgs }) => {
     client.self().set_god(true)
 })
 
-const k = await client.get('worlds/featured')
+const k = await client.get('me/worlds/completed')
 
 // for (const l of k) {
 //     console.log(l.worlds)

@@ -11,7 +11,7 @@ import PlayerModule from './modules/players.js'
 import WorldModule from './modules/world.js'
 import ChatModule from './modules/chat.js'
 
-import { Friend, Profile, CampaignMeta, WorldMeta } from './types/api.js'
+import { ProfileMeta, Profile, CampaignMeta, WorldMeta } from './types/api.js'
 import { Player, SelfPlayer } from './types/player.js'
 import { World } from './types/world.js'
 
@@ -152,12 +152,22 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     /**
      * @todo @ignore
      */
-    async get<T extends { invites_received: Friend[], friends: Friend[], invites_sent: Friend[] }>(endpoint: 'me/friends'): Promise<T>
+    async get<T extends { invites_received: ProfileMeta[], friends: ProfileMeta[], invites_sent: ProfileMeta[] }>(endpoint: 'me/friends'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<P extends string, T extends ProfileMeta[]>(endpoint: `/players/search?name=${P}`): Promise<T>
 
     /**
      * @todo @ignore
      */
     async get<T extends WorldMeta[]>(endpoint: 'me/worlds'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<T extends { worlds: string[] }>(endpoint: 'me/worlds/completed'): Promise<T>
 
     /**
      * @todo @ignore
@@ -180,6 +190,8 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     async get(endpoint: string): Promise<any>
 
     public async get<Response>(endpoint: string): Promise<Response> {
+        if (endpoint.startsWith('/')) endpoint = endpoint.substring(1)
+
         let response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
             method: 'GET',
             headers: {
@@ -200,6 +212,47 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
         return JSON.parse(text)
     }
+
+    // TODO "POST", "/me/friends/accept"
+    // TODO "POST", "/me/friends/reject"
+    // TODO "POST", "/me/friends/cancel"
+    // TODO "DELETE", "/me/friends"
+    // TODO "POST", "/me/friends/add
+    // TODO "GET", "/shop/" read with function "bo" for extended paths
+    // TODO POST", "/shop"
+    // TODO GET 'shop/smileys'
+    // TODO GET 'shop/aura/shapes'
+    // TODO GET 'shop/aura/colors'
+    // TODO GET 'shop/worlds'
+
+    // TODO <TODO>
+
+    /**
+     * @deprecated @ignore
+     */
+    async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
+
+    /**
+     * @deprecated @ignore
+     */
+    async api(method: any, endpoint: any, data?: any): Promise<any>
+
+    public async api<Data>(method: 'GET' | 'POST' | 'DELETE', endpoint: string, data?: any): Promise<[number, Data]> {
+        const response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
+            method,
+            headers: {
+                Authorization: 'Bearer ' + this.#token
+            },
+            body: data !== undefined ? JSON.stringify(data) : null
+        })
+
+        if (response.status.toString().startsWith('2'))
+            return [response.status, await response.json()]
+
+        throw new Error('Status Error (' + response.status + '): ' + response.text())
+    }
+
+    // </TODO>
 
     /**
      * @ignore This function uses the old token to auto refresh.
@@ -227,21 +280,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
                 throw new Error("Token Expired and could not refresh!")
         }
     }
-
-    // TODO "POST", "/me/friends/accept"
-    // TODO "POST", "/me/friends/reject"
-    // TODO "POST", "/me/friends/cancel"
-    // TODO "DELETE", "/me/friends"
-    // TODO "GET", "/players/search?name=" + s
-    // TODO "POST", "/me/friends/add
-    // TODO "GET", "/me/worlds/completed"
-    // TODO "GET", "/shop/" read with function "bo" for extended paths
-    // TODO POST", "/shop"
-
-    // TODO GET 'shop/smileys'
-    // TODO GET 'shop/aura/shapes'
-    // TODO GET 'shop/aura/colors'
-    // TODO GET 'shop/worlds'
 
     /**
      * @todo
@@ -357,36 +395,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         else
             return callback.module(this)
     }
-
-
-
-
-
-    // TODO <TODO>
-
-    async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
-
-    async api(method: any, endpoint: any, data?: any): Promise<any>
-
-    public async api<Data>(method: 'GET' | 'POST' | 'DELETE', endpoint: string, data?: any): Promise<[number, Data]> {
-        const response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
-            method,
-            headers: {
-                Authorization: 'Bearer ' + this.#token
-            },
-            body: data !== undefined ? JSON.stringify(data) : null
-        })
-
-        if (response.status.toString().startsWith('2'))
-            return [response.status, await response.json()]
-
-        throw new Error('Status Error (' + response.status + '): ' + response.text())
-    }
-
-    // </TODO>
-
-
-
 
     /**
      * @example
