@@ -9,23 +9,23 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) =
     /**
      * Add initial player into the array reference
      */
-    client.once('Init', ({ initArgs }: any) => {
+    client.once('Init', ({ initArgs }) => {
         if (!client.connected()) throw new Error('Could not connect Player Manager.')
 
         const self = set_self(new SelfPlayer(initArgs.me, client))
         players.push(self)
 
-        for (const player of initArgs.players) {
+        for (const player of initArgs.players ?? []) {
             if (player.localPlayerId === self.localPlayerId) continue
             players.push(new Player (player))
         }
 
         for (const player of players) {
             if (player.localPlayerId === self.localPlayerId) continue
-            client.emit('player:join', player, false)
+            client.emit('OldAdd', player)
         }
 
-        client.emit('start')
+        // client.emit('start')
     })
 
     /**
@@ -37,7 +37,7 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) =
         const player = new Player (addArgs)
         players.push(player)
         if (player.localPlayerId === client.self().localPlayerId) return
-        client.emit('player:join', player, true)
+        // client.emit('player:join', player, true)
     })
 
     /**
@@ -46,7 +46,7 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) =
     client.on('Leave', ({ issuerLocalPlayerId }: any) => {
         const index = players.findIndex(p => p.localPlayerId == issuerLocalPlayerId)
         if (index < 0) return
-        client.emit('player:leave', players[index])
+        // client.emit('player:leave', players[index])
         players.splice(index, 1)
     })
 

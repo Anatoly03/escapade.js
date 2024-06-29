@@ -35,7 +35,7 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient) 
 
         if (block.equals(previous_block)) return
 
-        client.emit('block', player, block)
+        // client.emit('block', player, block)
     })
 
     return client

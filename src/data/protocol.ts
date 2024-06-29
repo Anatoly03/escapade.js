@@ -205,7 +205,8 @@ let EventsWithoutArguments: [string, number][] = [];
                     // const event_id = WorldEventTypes[event_name]
                     // console.log(event_name, event_id)
                     UsedEvents.push(...event_ids)
-                    return '\teventType: ' + event_ids.join(' | ')
+                    const event_id_strings = event_ids.map(id => Object.entries(WorldEventTypes).find(t => t[1] == id)).filter(v => v !== undefined).map(v => `WorldEventType.${v?.[0]}`)
+                    return '\teventType: ' + event_id_strings.join(' | ')
                 }
                 else {
                     type = treat_type(convert_to_js_type(value.type)) + (value.repeated ? '[]' : '')

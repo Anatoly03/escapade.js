@@ -2,10 +2,10 @@
 import WebSocket from 'ws'
 import { EventEmitter } from 'events'
 
-import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
+import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
 import WorldModule from './modules/world.js'
@@ -17,8 +17,17 @@ import { WorldMeta } from './types/world-meta.js'
 import { Player, SelfPlayer } from './types/player.js'
 import { World } from './types/world.js'
 
-type RawEvents = { [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] }
-type StarEvent = { '*': any[] }
+type RawEvents = {
+    [K in keyof typeof WorldEventType as K extends keyof typeof WorldEventType ? K : never]:
+    [WorldEvent & { eventType: (typeof WorldEventType)[K] }]
+}
+
+type LibraryEvents = {
+    '*': any[]
+    'OldAdd': [PlayerInfo]
+    'Close': [string]
+    'Error': [Error]
+}
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
@@ -26,7 +35,8 @@ type StarEvent = { '*': any[] }
  * guard `EscapadeClient.connected()` which is true, if the
  * socket can send and receive events.
  */
-export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<RawEvents & StarEvent & LibraryEvents> {
+export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter< LibraryEvents & RawEvents > {
+// export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<RawEvents & LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
@@ -265,17 +275,17 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         })
 
         this.#socket.on('close', async (code, reason) => {
-            this.emit<'close'>('close', reason.toString('ascii'))
+            this.emit('Close', reason.toString('ascii'))
         })
 
         this.#socket.on('error', async (err) => {
             this.disconnect()
-            this.emit<'error'>('error', err)
+            this.emit('Error', err)
         })
 
         this.#socket.on('unexpected-response', (request, response) => {
             this.disconnect()
-            this.emit<'error'>('error', new Error(`Unexpected Response from host ${request.protocol}://${request.host}/${request.path} with status code ${response.statusCode}. ${response.statusMessage ?? ''}`))
+            this.emit('Error', new Error(`Unexpected Response from host ${request.protocol}://${request.host}/${request.path} with status code ${response.statusCode}. ${response.statusMessage ?? ''}`))
         })
 
         return this.connected() as Ready
@@ -318,6 +328,20 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
         return this
     }
+
+    // /**
+    //  * 
+    //  */
+    // public override on<EventName extends keyof RawEvents>(eventName: EventName, listener: (...args: RawEvents[EventName]) => void): this
+    
+    // /**
+    //  * @ignore
+    //  */
+    // public override on<Events extends (keyof RawEvents)[]>(eventName: Events, listener: (...args: RawEvents[EventName]) => void): this
+
+    // public override on(event_name: any, listener: any): this {
+    //     return (super.on as any)(event_name, listener)
+    // }
 
     /**
      * @ignore @todo Include Event handler from another client instance. This function
