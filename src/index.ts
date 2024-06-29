@@ -1,4 +1,9 @@
 
+export { EscapadeClient } from './client.js'
+
+/**
+ * @ignore
+ */
 export { EscapadeClient as default } from './client.js'
 
 /**

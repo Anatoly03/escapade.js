@@ -17,30 +17,22 @@ import { WorldMeta } from './types/world-meta.js'
 import { Player, SelfPlayer } from './types/player.js'
 import { World } from './types/world.js'
 
+type RawEvents = { [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] }
+type StarEvent = { '*': any[] }
+
 /**
  * @param {boolean} Ready The type parameter defines, wether
  * or not the game socket is connected. It is assumed by type
  * guard `EscapadeClient.connected()` which is true, if the
  * socket can send and receive events.
- * 
- * @param {boolean} Magic This type parameter can be set to perform
- * a magic action, that is either undocumented or goes against the
- * principles of the SDK, such as sending directly from the socket,
- * ignoring all scheduling or otherwise activity.
- * 
- * @event Chat Test Docs
- * 
- * Test More
  */
-export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<LibraryEvents> {
+export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<RawEvents & StarEvent & LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
     #players: Player[] = []
     #self: Player | undefined
     #world: World | undefined
-
-    #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
 
     /**
      * Create a new Escapade Client instance, by logging in with a token.
@@ -68,7 +60,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     constructor(args: { token: string }) {
         super()
         this.#token = args.token
-        this.#events_raw = new EventEmitter()
 
         this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
         this.include(WorldModule((value: World) => this.#world = value))
@@ -98,21 +89,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      */
     public socket(this: EscapadeClient<true>): WebSocket {
         return this.#socket as WebSocket
-    }
-
-    /**
-     * Get the event handler of all raw events emitted by the game server.
-     * 
-     * @example
-     * 
-     * ```ts
-     * client.raw().on('Chat', args => {
-     *     console.log(args.message)
-     * })
-     * ```
-     */
-    public raw(): EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]}> {
-        return this.#events_raw
     }
 
     /**
@@ -284,8 +260,8 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
                 .map(k => [k, WorldEventType[k as any]])
                 .find(([k, v]) => v === data.eventType)
 
-            this.#events_raw.emit('*', data as any)
-            if (event_name !== undefined) this.#events_raw.emit(event_name[0] as any, data)
+            this.emit('*', data as any)
+            if (event_name !== undefined) this.emit(event_name[0] as any, data)
         })
 
         this.#socket.on('close', async (code, reason) => {
@@ -326,7 +302,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         const eventType: number = EscapadeClient.WorldEvents[message_type]
         const attrs = WorldEventMatch[message_type]
         const tmp = payload
-        
+
         payload = { eventType }
         if (attrs && attrs.length > 0) payload[attrs[0]] = tmp
 
@@ -370,7 +346,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
 
     async api(method: any, endpoint: any, data?: any): Promise<any>
-    
+
     public async api<Data>(method: 'GET' | 'POST' | 'DELETE', endpoint: string, data?: any): Promise<[number, Data]> {
         const response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
             method,

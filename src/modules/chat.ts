@@ -8,7 +8,7 @@ export default () => (client: EscapadeClient) => {
     /**
      * Chat message was sent.
      */
-    client.raw().on('Chat', ({ issuerLocalPlayerId, chatArgs }: any) => {
+    client.on('Chat', ({ issuerLocalPlayerId, chatArgs }: any) => {
         if (!client.connected()) return
         const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId)
         if (!player) return

@@ -12,7 +12,7 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient) 
     /**
      * Scrap world data into an organized structure
      */
-    client.raw().once('Init', ({ initArgs }: any) => {
+    client.once('Init', ({ initArgs }: any) => {
         if (!client.connected()) throw new Error('Could not connect Player Manager.')
         const world_info = initArgs.world as WorldInfo
         const world = set_world(new World(world_info, client))
@@ -21,7 +21,7 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient) 
     /**
      * Set block
      */
-    client.raw().on('Block', ({ issuerLocalPlayerId, blockArgs }: any) => {
+    client.on('Block', ({ issuerLocalPlayerId, blockArgs }: any) => {
         if (!client.connected()) throw new Error('Could not connect Player Manager.')
 
         const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId) as Player
