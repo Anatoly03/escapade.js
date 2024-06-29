@@ -1,10 +1,11 @@
 
-import { PlayerInfo, PlayerState } from '../data/protocol.g.js'
+import { EscapadeClient } from '../client.js'
+import { MoveArgs, PlayerInfo, PlayerState } from '../data/protocol.g.js'
 
 export class Player implements PlayerInfo {
     localPlayerId = 0
     playerId = 'undeclared'
-    name = 'UNKNOWN'
+    name : string | undefined
     smileyId = 0
     auraShapeId = 0
     auraColorId = 0
@@ -17,4 +18,40 @@ export class Player implements PlayerInfo {
     constructor(from: PlayerInfo = {}) {
         Object.keys(from).forEach((k: any) => (this[k as keyof Player] as any) = from[k as keyof PlayerInfo])
     }
+}
+
+export class SelfPlayer extends Player {
+    #client: EscapadeClient<true>
+    #seed: number
+    #position: { x: number, y: number }
+
+    constructor(from: PlayerInfo = {}, client: EscapadeClient<true>) {
+        super(from)
+
+        this.#client = client
+
+        this.#seed = from.playState?.moveArgs?.seed ?? 0
+        this.#position = { x: 0, y: 0, ...(from.playState?.moveArgs?.position ?? {})}
+    }
+
+    /**
+     * Common Send Data of the Move Packet
+     */
+    private args(data: Partial<MoveArgs>): MoveArgs {
+        return {
+            seed: this.#seed,
+            position: this.#position,
+            direction: {},
+            velocity: {},
+            ...data
+        }
+    }
+
+    /**
+     * @param isGod Set god mode on or off
+     */
+    public set_god(isGod: boolean) {
+        this.#client.send('Move', this.args({ isGod }))
+    }
+
 }
