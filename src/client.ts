@@ -11,9 +11,7 @@ import PlayerModule from './modules/players.js'
 import WorldModule from './modules/world.js'
 import ChatModule from './modules/chat.js'
 
-import { Friend } from './types/friend.js'
-import { Profile } from './types/profile.js'
-import { WorldMeta } from './types/world-meta.js'
+import { Friend, Profile, CampaignMeta, WorldMeta } from './types/api.js'
 import { Player, SelfPlayer } from './types/player.js'
 import { World } from './types/world.js'
 
@@ -115,6 +113,12 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
     /**
      * A reference of the self player object.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.self().set_god(true)
+     * ```
      */
     public self(this: EscapadeClient<true>): SelfPlayer {
         return this.#self as SelfPlayer
@@ -159,6 +163,11 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * @todo @ignore
      */
     async get<T extends WorldMeta[]>(endpoint: 'worlds'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<T extends CampaignMeta[]>(endpoint: 'campaigns'): Promise<T>
 
     /**
      * @todo
@@ -221,7 +230,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     // TODO "GET", "/players/search?name=" + s
     // TODO "POST", "/me/friends/add
     // TODO "GET", "/me/worlds/completed"
-    // TODO "GET", "/campaigns"
     // TODO "GET", "/worlds/featured"
     // TODO "GET", "/campaigns"
     // TODO "GET", "/shop/" read with function "bo" for extended paths
@@ -328,20 +336,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
         return this
     }
-
-    // /**
-    //  * 
-    //  */
-    // public override on<EventName extends keyof RawEvents>(eventName: EventName, listener: (...args: RawEvents[EventName]) => void): this
-    
-    // /**
-    //  * @ignore
-    //  */
-    // public override on<Events extends (keyof RawEvents)[]>(eventName: Events, listener: (...args: RawEvents[EventName]) => void): this
-
-    // public override on(event_name: any, listener: any): this {
-    //     return (super.on as any)(event_name, listener)
-    // }
 
     /**
      * @ignore @todo Include Event handler from another client instance. This function
