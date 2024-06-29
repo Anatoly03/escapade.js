@@ -24,6 +24,7 @@ export class SelfPlayer extends Player {
     #client: EscapadeClient<true>
     #seed: number
     #position: { x: number, y: number }
+    #deathCount = 0
 
     constructor(from: PlayerInfo = {}, client: EscapadeClient<true>) {
         super(from)
@@ -54,4 +55,8 @@ export class SelfPlayer extends Player {
         this.#client.send('Move', this.args({ isGod }))
     }
 
+    public kill() {
+        this.#client.send('Death', { count: ++this.#deathCount })
+        this.#client.send('Respawn')
+    }
 }

@@ -64,10 +64,12 @@ const Header = `\n/*
  * The following file is generated from \`protocol.ts\`.
  */\n`
 
-const TypeScript = fs.createWriteStream(import.meta.dirname + '/protocol.g.d.ts', { autoClose: true })
+const TypeScript = fs.createWriteStream(import.meta.dirname + '/protocol.g.ts', { autoClose: true })
+const TypeScriptDeclaration = fs.createWriteStream(import.meta.dirname + '/protocol.g.d.ts', { autoClose: true })
 const JavaScript = fs.createWriteStream(import.meta.dirname + '/protocol.g.js', { autoClose: true })
 
 TypeScript.write(Header)
+TypeScriptDeclaration.write(Header)
 JavaScript.write(Header)
 
 /**
@@ -115,7 +117,11 @@ function treat_type(key: string) {
     for (const { key } of Variables.filter(value => value.type == 'enum')) {
         const Enum = PROTOCOL.lookupEnum(key)
 
-        TypeScript.write(`\nexport declare const ${key}: {\n${
+        TypeScript.write(`\nexport enum ${key} {\n${
+            Object.entries(Enum.values).map(([v, k]) => `\t${v} = ${k},`).join('\n')
+        }\n}\n`)
+
+        TypeScriptDeclaration.write(`\nexport declare const ${key}: {\n${
             Object.entries(Enum.values).map(([v, k]) => `\t${v}: ${k}`).join('\n')
         }\n}\n`)
         
@@ -210,13 +216,18 @@ let EventsWithoutArguments: [string, number][] = [];
             }).join('\n')
         }).join('\n} | {\n')
 
+        let TEXT = ''
+
         if (Var.type == 'world') {
             EventsWithoutArguments = Object.entries(WorldEventTypes).filter(([k, v]) => !UsedEvents.includes(v))
             const other_events = '\tissuerLocalPlayerId: number\n\teventType: ' + EventsWithoutArguments.map(([k, v]) => v).join(' | ')
-            TypeScript.write(`\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`)
+            TEXT = `\nexport type ${key} = {\n${TypeString}\n} | {\n${other_events}\n}\n`
         } else {
-            TypeScript.write(`\nexport interface ${key} {\n${TypeString}\n}\n`)
+            TEXT = `\nexport interface ${key} {\n${TypeString}\n}\n`
         }
+
+        TypeScript.write(TEXT)
+        TypeScriptDeclaration.write(TEXT)
 
         // for (const attr of MutualKeys) {
         //     // console.log(attr, Type.get(attr)?.name, Type.get(attr)?.parent?.name)
@@ -244,7 +255,11 @@ let EventsWithoutArguments: [string, number][] = [];
         return [k, Type]
     })]
 
-    TypeScript.write(`\nexport type SendEventTypes = {\n${TypeMap.map(([k, v]) => `\t${k}: ${v}`).join('\n')}\n}\n`)
+    const TEXT = `\nexport type SendEventTypes = {\n${TypeMap.map(([k, v]) => `\t${k}: ${v}`).join('\n')}\n}\n`
+
+
+    TypeScript.write(TEXT)
+    TypeScriptDeclaration.write(TEXT)
 
     // console.log(WorldEventMatch)
 
@@ -274,6 +289,6 @@ let EventsWithoutArguments: [string, number][] = [];
     // console.log(EventsWithoutArguments)
 })();
 
-TypeScript.close()
+TypeScriptDeclaration.close()
 JavaScript.close()
 
