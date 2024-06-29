@@ -22,12 +22,13 @@ client.once('Init', ({ initArgs }) => {
     client.self().set_god(true)
 })
 
-const k = await client.get('campaigns')
+const k = await client.get('worlds/featured')
 
-for (const l of k) {
-    console.log(l.worlds)
-}
+// for (const l of k) {
+//     console.log(l.worlds)
+// }
 
+console.log(k)
 
 // client.on('block', (p, b) => {
 //     if (!client.connected()) return

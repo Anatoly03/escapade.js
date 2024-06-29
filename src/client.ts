@@ -170,6 +170,11 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     async get<T extends CampaignMeta[]>(endpoint: 'campaigns'): Promise<T>
 
     /**
+     * @todo @ignore
+     */
+    async get<T extends (CampaignMeta & { title: 'Featured' })>(endpoint: 'worlds/featured'): Promise<T>
+
+    /**
      * @todo
      */
     async get(endpoint: string): Promise<any>
@@ -230,8 +235,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     // TODO "GET", "/players/search?name=" + s
     // TODO "POST", "/me/friends/add
     // TODO "GET", "/me/worlds/completed"
-    // TODO "GET", "/worlds/featured"
-    // TODO "GET", "/campaigns"
     // TODO "GET", "/shop/" read with function "bo" for extended paths
     // TODO POST", "/shop"
 
