@@ -454,9 +454,11 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     public async pm(target: number | string | Player, message: string) {
         if (typeof target == 'object')
             target = (target as Player).localPlayerId
-        else if (typeof target == 'string')
-            throw new Error('`pm(username, message)` Is Not Yet Implemented!')
-
+        else if (typeof target == 'string') {
+            const player = this.#players.find(p => p.name == target)
+            if (!player) throw new Error(`Player ${target} not found of ${this.#players.map(({ name }) => name).join()}.`)
+            target = player.localPlayerId
+        }
         if (!this.connected()) throw new Error('Client not connected.')
         this.send('Chat', { message, isPrivate: true, targetLocalPlayerId: target })
         return true
