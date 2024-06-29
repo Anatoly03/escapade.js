@@ -11,7 +11,7 @@ client.on('player:join', (player) => {
 })
 ```
 
-##### Changes <!-- DESCRIBE ALL CHANGES/ MODIFICATIONS STARTING WITH ADD/ REMOVE/  -->
+##### Changes <!-- DESCRIBE ALL CHANGES/ MODIFICATIONS STARTING WITH ADD/ REMOVE/ CHANGE. KEEP EVERYTHING SHORT -->
 
 - [x] Add `Client.pm()` method.
 - [ ] ...
