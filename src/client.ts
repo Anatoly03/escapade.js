@@ -515,14 +515,14 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
-     * @example
+     * @deprecated
      * 
      * Synchronize. You need to send this, if you want
      * to see the bot player in the world.
      * 
      * ```ts
      * client.on('start', () => {
-     *     client.sync()
+     *     client.send('Sync')
      * })
      * ```
      */
