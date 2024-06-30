@@ -1,5 +1,5 @@
 import { EscapadeClient } from "../client";
-import { PlayerInfo } from "../data/protocol.g";
+import { PlayerInfo, WorldEventType } from "../data/protocol.g.js";
 import { Player, SelfPlayer } from "../types/player.js";
 
 /**
@@ -10,7 +10,7 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
     /**
      * Add initial player into the array reference
      */
-    client.once('Init', ({ initArgs }) => {
+    client.once('Init', ({ issuerLocalPlayerId, initArgs }) => {
         if (!client.connected()) throw new Error('Could not connect Player Manager.')
 
         const self = set_self(new SelfPlayer(initArgs.me, client))
@@ -23,7 +23,11 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
 
         for (const player of players) {
             if (player.localPlayerId === self.localPlayerId) continue
-            client.emit('OldAdd', player)
+            client.emit('OldAdd', {
+                issuerLocalPlayerId,
+                addArgs: player,
+                eventType: WorldEventType.Add
+            })
         }
 
         // client.emit('start')

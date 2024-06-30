@@ -24,6 +24,11 @@ client.once('Init', ({ initArgs }) => {
 
 client.onCommand('help', () => 'Commands: !help')
 
+// client.on('Add', add => add.addArgs)
+
+// client.onAll(['Add'], args => console.log(args))
+client.onAll(['Add', 'OldAdd'], args => console.log(args.issuerLocalPlayerId))
+
 // client.on('block', (p, b) => {
 //     if (!client.connected()) return
 

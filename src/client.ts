@@ -22,7 +22,7 @@ type RawEvents = {
 
 type LibraryEvents = {
     '*': any[]
-    'OldAdd': [PlayerInfo]
+    'OldAdd': [WorldEvent & { eventType: WorldEventType.Add }]
     'Close': [string]
     'Error': [Error]
 }
@@ -393,6 +393,20 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
 
+        return this
+    }
+
+    /**
+     * Combine several events with one callback.
+     * @example
+     * ```ts
+     * client.onAll(['Add', 'OldAdd'], (player) => console.log(`${player.name} joined!`))
+     * ```
+     */
+    public onAll<K extends (LibraryEvents & RawEvents), A extends (keyof K)[], Args extends K[A[number]], Z>(eventNames: A, listener: (...args: Args extends Array<Z> ? Args : never) => void): this {
+        eventNames.forEach(event => {
+            this.on(event, listener as any)
+        })
         return this
     }
 
