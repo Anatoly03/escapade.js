@@ -121,6 +121,14 @@ export class World {
     /**
      * @todo
      */
+    public clear() {
+        this.#client.say('/clear')
+        return this
+    }
+
+    /**
+     * @todo
+     */
     public fromBuffer(deflatedWorldData: Uint8Array) {
         const decompressed = fflate.inflateSync(deflatedWorldData)
         const world_data = EscapadeClient.protocol.lookupType('WorldData').decode(decompressed) as WorldData
