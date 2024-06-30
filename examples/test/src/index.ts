@@ -5,15 +5,6 @@ import { Block } from '../../../dist/types/block'
 
 const client = new EscapadeClient({ token: process.env.token } as any)
 
-// client.world()
-
-// client.self()
-// const worlds = await client.get('worlds')
-
-// client.once('close', (reason) => {
-//     console.log('Disconnected! ', reason)
-// })
-
 client.once('Init', ({ initArgs }) => {
     if (!client.connected()) return
     client.sync()
@@ -22,7 +13,13 @@ client.once('Init', ({ initArgs }) => {
     client.self().set_god(true)
 })
 
-client.onCommand('help', () => 'Commands: !help')
+client.onCommand('help', () => 'Commands: !help !kill')
+
+client.onCommand('kill', () => {
+    if (!client.connected()) return
+    client.self().kill()
+    console.log('Death')
+})
 
 // client.on('Add', add => add.addArgs)
 

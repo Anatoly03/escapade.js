@@ -3,6 +3,8 @@ import { EscapadeClient } from '../client.js'
 import { MoveArgs, PlayerInfo, PlayerState } from '../data/protocol.g.js'
 
 export class Player implements PlayerInfo {
+    protected client: EscapadeClient<true>
+
     localPlayerId = 0
     playerId = 'undeclared'
     name : string | undefined
@@ -15,21 +17,19 @@ export class Player implements PlayerInfo {
     permLevel = 0 as 0
     canEdit = false
 
-    constructor(from: PlayerInfo = {}) {
+    constructor(client: EscapadeClient<true>, from: PlayerInfo = {}) {
+        this.client = client
         Object.keys(from).forEach((k: any) => (this[k as keyof Player] as any) = from[k as keyof PlayerInfo])
     }
 }
 
 export class SelfPlayer extends Player {
-    #client: EscapadeClient<true>
     #seed: number
     #position: { x: number, y: number }
     #deathCount = 0
 
-    constructor(from: PlayerInfo = {}, client: EscapadeClient<true>) {
-        super(from)
-
-        this.#client = client
+    constructor(client: EscapadeClient<true>, from: PlayerInfo = {}) {
+        super(client, from)
 
         this.#seed = from.playState?.moveArgs?.seed ?? 0
         this.#position = { x: 0, y: 0, ...(from.playState?.moveArgs?.position ?? {})}
@@ -52,11 +52,11 @@ export class SelfPlayer extends Player {
      * @param isGod Set god mode on or off
      */
     public set_god(isGod: boolean) {
-        this.#client.send('Move', this.args({ isGod }))
+        this.client.send('Move', this.args({ isGod }))
     }
 
     public kill() {
-        this.#client.send('Death', { count: ++this.#deathCount })
-        this.#client.send('Respawn')
+        this.client.send('Death', { count: ++this.#deathCount })
+        this.client.send('Respawn')
     }
 }

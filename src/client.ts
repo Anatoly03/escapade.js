@@ -403,6 +403,18 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * client.onAll(['Add', 'OldAdd'], (player) => console.log(`${player.name} joined!`))
      * ```
      */
+
+    // Explanation of generic parameters:
+    // <K> - temporary generic parameter to store all events that
+    //       the client instance reacts to
+    // <A> - temporary generic parameter to label the events array
+    //       for example ['Add', 'Init'], this will be the event
+    //       names parameter
+    // <Args> - temporary generic parameter to label the arguments
+    //       intersection of the callback function
+    // <Z> - generic parameter
+    // Function signature: (eventNames: <A>, callback: (...Args) => void): this
+
     public onAll<K extends (LibraryEvents & RawEvents), A extends (keyof K)[], Args extends K[A[number]], Z>(eventNames: A, listener: (...args: Args extends Array<Z> ? Args : never) => void): this {
         eventNames.forEach(event => {
             this.on(event, listener as any)
@@ -422,7 +434,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * })
      * ```
      */
-    public onCommand(cmd: string, permission_check: (player: Player) => boolean, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this
+    public onCommand(cmd: string, permission_check: (player: PlayerInfo) => boolean, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this
 
     /**
      * Register a (global use) command. If the command returns a string value it
@@ -509,7 +521,9 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
-     * @todo @example
+     * Send a private message to a user.
+     * 
+     * @example
      * 
      * ```ts
      * client.pm(user, 'Hello, World!')
@@ -538,7 +552,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
     public async pm(target: number | string | PlayerInfo, message: string) {
         if (typeof target == 'object')
-            target = (target as Player).localPlayerId
+            target = (target as PlayerInfo).localPlayerId ?? 0
         else if (typeof target == 'string') {
             const player = this.#players.find(p => p.name == target)
             if (!player) throw new Error(`Player ${target} not found of ${this.#players.map(({ name }) => name).join()}.`)
