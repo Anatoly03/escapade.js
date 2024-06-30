@@ -3,12 +3,13 @@ In this paragraph, briefly in up to 3 lines describe what you have added with th
 
 ##### Example Usage <!-- IF THIS PULL REQUEST DOES NOT INTRODUCE NEW CODE BEHAVIOUR, EXTERNAL OR INTERNAL, REMOVE THIS SECTION -->
 
-```ts
-const client = EscapadeClient(process.env)
-
-client.on('player:join', (player) => {
-    player.pm('Hello, Player!')
-})
+```diff
+  const client = EscapadeClient(process.env)
+  
+  client.on('player:join', (player) => {
+-     client.say(`/pm ${player.name} Hello, Player!`)
++     player.pm('Hello, Player!')
+  })
 ```
 
 ##### Changes <!-- DESCRIBE ALL CHANGES/ MODIFICATIONS STARTING WITH ADD/ REMOVE/ CHANGE. KEEP EVERYTHING SHORT -->
@@ -18,5 +19,5 @@ client.on('player:join', (player) => {
 
 ##### Review <!-- IF THIS PULL REQUEST DOES NOT INTRODUCE NEW CODE BEHAVIOUR, EXTERNAL OR INTERNAL, REMOVE THIS SECTION -->
 
-- [ ] This Pull Request does not deprecate or break old code behaviour.
+- [ ] This Pull Request does not break old code behaviour. If a deletion is planned, the code segment was planned as deprecated.
 - [ ] All additions, if any, are properly documented, the type documentation has been tested and is clearly readable.

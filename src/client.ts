@@ -2,45 +2,58 @@
 import WebSocket from 'ws'
 import { EventEmitter } from 'events'
 
-import { ESCAPADE_API, SOCKET_URL, LibraryEvents } from './data/consts.js'
+import { ESCAPADE_API, SOCKET_URL } from './data/consts.js'
 import { PROTOCOL, WorldEventMatch } from './data/protocol.js'
 
-import { WorldEvent, WorldEventType, SendEventTypes } from './data/protocol.g.js'
+import { WorldEvent, WorldEventType, SendEventTypes, PlayerInfo } from './data/protocol.g.js'
 
 import PlayerModule from './modules/players.js'
 import WorldModule from './modules/world.js'
-import ChatModule from './modules/chat.js'
+import CommandModule from './modules/commands.js'
 
-import { Friend } from './types/friend.js'
-import { Profile } from './types/profile.js'
-import { WorldMeta } from './types/world-meta.js'
+import { ProfileMeta, Profile, CampaignMeta, WorldMeta } from './types/api.js'
 import { Player, SelfPlayer } from './types/player.js'
 import { World } from './types/world.js'
+
+type RawEvents = {
+    [K in keyof typeof WorldEventType as K extends keyof typeof WorldEventType ? K : never]:
+    [WorldEvent & { eventType: (typeof WorldEventType)[K] }]
+}
+
+type LibraryEvents = {
+    '*': any[]
+    'OldAdd': [WorldEvent & { eventType: WorldEventType.Add }]
+    'Close': [string]
+    'Error': [Error]
+}
 
 /**
  * @param {boolean} Ready The type parameter defines, wether
  * or not the game socket is connected. It is assumed by type
  * guard `EscapadeClient.connected()` which is true, if the
  * socket can send and receive events.
- * 
- * @param {boolean} Magic This type parameter can be set to perform
- * a magic action, that is either undocumented or goes against the
- * principles of the SDK, such as sending directly from the socket,
- * ignoring all scheduling or otherwise activity.
- * 
- * @event Chat Test Docs
- * 
- * Test More
  */
-export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<LibraryEvents> {
+export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<LibraryEvents & RawEvents> {
     #socket: WebSocket | undefined
     #token: string
 
-    #players: Player[] = []
+    #players: PlayerInfo[] = []
     #self: Player | undefined
     #world: World | undefined
 
-    #events_raw: EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]} >
+    #commands: [string, (player: PlayerInfo) => boolean, (receive: PlayerInfo, ...args: string[]) => void][] = []
+
+    /**
+     * The command prefix array stores all the prefici the bot
+     * will react to. The prefici that are accepted by the client
+     * are tried in order from left to right, so if a prefix is a
+     * prefix of another prefix, it has to be put later. (For example,
+     * for command prefici `.` and `..`, `.` has to be placed later
+     * in the array.)
+     * 
+     * This array cannot be set to the empty array `[]`
+     */
+    public COMMAND_PREFIX: [string, ...string[]] = ['.', '!']
 
     /**
      * Create a new Escapade Client instance, by logging in with a token.
@@ -68,11 +81,10 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     constructor(args: { token: string }) {
         super()
         this.#token = args.token
-        this.#events_raw = new EventEmitter()
 
         this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
         this.include(WorldModule((value: World) => this.#world = value))
-        this.include(ChatModule())
+        this.include(CommandModule(this.#commands))
     }
 
     /**
@@ -101,18 +113,10 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
-     * Get the event handler of all raw events emitted by the game server.
-     * 
-     * @example
-     * 
-     * ```ts
-     * client.raw().on('Chat', args => {
-     *     console.log(args.message)
-     * })
-     * ```
+     * @deprecated All Events are now managed by the client. Remove all instances of `.raw()`
      */
-    public raw(): EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]}> {
-        return this.#events_raw
+    public raw() {
+        return this as EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & { '*': any[] }>
     }
 
     /**
@@ -123,12 +127,41 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * console.log('Players In World: ', client.players().map({ name } => name).join())
      * ```
      */
-    public players(this: EscapadeClient<true>): Player[] {
+    public players(this: EscapadeClient<true>): PlayerInfo[] {
         return this.#players
     }
 
     /**
+     * Retrieve a player object.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.player('user').pm('Hello!')
+     * ```
+     */
+    public player(this: EscapadeClient<true>, data: number | string | PlayerInfo): Player | undefined {
+        let playerInterface = this.players().find(p => {
+            if (typeof data == 'object')
+                return data.localPlayerId == p.localPlayerId
+            else if (typeof data == 'string')
+                return data == p.name
+            else if (typeof data == 'number')
+                return data == p.localPlayerId
+            return false
+        })
+        if (!playerInterface) return
+        return new Player(this, playerInterface)
+    }
+
+    /**
      * A reference of the self player object.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.self().set_god(true)
+     * ```
      */
     public self(this: EscapadeClient<true>): SelfPlayer {
         return this.#self as SelfPlayer
@@ -162,7 +195,12 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     /**
      * @todo @ignore
      */
-    async get<T extends { invites_received: Friend[], friends: Friend[], invites_sent: Friend[] }>(endpoint: 'me/friends'): Promise<T>
+    async get<T extends { invites_received: ProfileMeta[], friends: ProfileMeta[], invites_sent: ProfileMeta[] }>(endpoint: 'me/friends'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<P extends string, T extends ProfileMeta[]>(endpoint: `/players/search?name=${P}`): Promise<T>
 
     /**
      * @todo @ignore
@@ -172,7 +210,22 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     /**
      * @todo @ignore
      */
+    async get<T extends { worlds: string[] }>(endpoint: 'me/worlds/completed'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
     async get<T extends WorldMeta[]>(endpoint: 'worlds'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<T extends CampaignMeta[]>(endpoint: 'campaigns'): Promise<T>
+
+    /**
+     * @todo @ignore
+     */
+    async get<T extends (CampaignMeta & { title: 'Featured' })>(endpoint: 'worlds/featured'): Promise<T>
 
     /**
      * @todo
@@ -180,6 +233,8 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     async get(endpoint: string): Promise<any>
 
     public async get<Response>(endpoint: string): Promise<Response> {
+        if (endpoint.startsWith('/')) endpoint = endpoint.substring(1)
+
         let response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
             method: 'GET',
             headers: {
@@ -200,6 +255,47 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
         return JSON.parse(text)
     }
+
+    // TODO "POST", "/me/friends/accept"
+    // TODO "POST", "/me/friends/reject"
+    // TODO "POST", "/me/friends/cancel"
+    // TODO "DELETE", "/me/friends"
+    // TODO "POST", "/me/friends/add
+    // TODO "GET", "/shop/" read with function "bo" for extended paths
+    // TODO POST", "/shop"
+    // TODO GET 'shop/smileys'
+    // TODO GET 'shop/aura/shapes'
+    // TODO GET 'shop/aura/colors'
+    // TODO GET 'shop/worlds'
+
+    // TODO <TODO>
+
+    /**
+     * @deprecated @ignore
+     */
+    async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
+
+    /**
+     * @deprecated @ignore
+     */
+    async api(method: any, endpoint: any, data?: any): Promise<any>
+
+    public async api<Data>(method: 'GET' | 'POST' | 'DELETE', endpoint: string, data?: any): Promise<[number, Data]> {
+        const response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
+            method,
+            headers: {
+                Authorization: 'Bearer ' + this.#token
+            },
+            body: data !== undefined ? JSON.stringify(data) : null
+        })
+
+        if (response.status.toString().startsWith('2'))
+            return [response.status, await response.json()]
+
+        throw new Error('Status Error (' + response.status + '): ' + response.text())
+    }
+
+    // </TODO>
 
     /**
      * @ignore This function uses the old token to auto refresh.
@@ -227,24 +323,6 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
                 throw new Error("Token Expired and could not refresh!")
         }
     }
-
-    // TODO "POST", "/me/friends/accept"
-    // TODO "POST", "/me/friends/reject"
-    // TODO "POST", "/me/friends/cancel"
-    // TODO "DELETE", "/me/friends"
-    // TODO "GET", "/players/search?name=" + s
-    // TODO "POST", "/me/friends/add
-    // TODO "GET", "/me/worlds/completed"
-    // TODO "GET", "/campaigns"
-    // TODO "GET", "/worlds/featured"
-    // TODO "GET", "/campaigns"
-    // TODO "GET", "/shop/" read with function "bo" for extended paths
-    // TODO POST", "/shop"
-
-    // TODO GET 'shop/smileys'
-    // TODO GET 'shop/aura/shapes'
-    // TODO GET 'shop/aura/colors'
-    // TODO GET 'shop/worlds'
 
     /**
      * @todo
@@ -284,22 +362,22 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
                 .map(k => [k, WorldEventType[k as any]])
                 .find(([k, v]) => v === data.eventType)
 
-            this.#events_raw.emit('*', data as any)
-            if (event_name !== undefined) this.#events_raw.emit(event_name[0] as any, data)
+            this.emit('*', data as any)
+            if (event_name !== undefined) this.emit(event_name[0] as any, data)
         })
 
         this.#socket.on('close', async (code, reason) => {
-            this.emit<'close'>('close', reason.toString('ascii'))
+            this.emit('Close', reason.toString('ascii'))
         })
 
         this.#socket.on('error', async (err) => {
             this.disconnect()
-            this.emit<'error'>('error', err)
+            this.emit('Error', err)
         })
 
         this.#socket.on('unexpected-response', (request, response) => {
             this.disconnect()
-            this.emit<'error'>('error', new Error(`Unexpected Response from host ${request.protocol}://${request.host}/${request.path} with status code ${response.statusCode}. ${response.statusMessage ?? ''}`))
+            this.emit('Error', new Error(`Unexpected Response from host ${request.protocol}://${request.host}/${request.path} with status code ${response.statusCode}. ${response.statusMessage ?? ''}`))
         })
 
         return this.connected() as Ready
@@ -309,16 +387,17 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * Disconnects the client, and if in the world, leave.
      */
     disconnect(): void {
-        this.send('Leave')
-        this.#socket?.close()
+        try {
+            this.send('Leave')
+        } finally {
+            this.#socket?.close()
+        }
     }
 
     /**
      * @todo
      */
-    // TODO add `this: EscapadeClient<true, true>, ` type guard in param
-    public send<EventName extends keyof SendEventTypes>
-        (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true>
+    public send<EventName extends keyof SendEventTypes>(message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true>
 
     public send(message_type: string, payload: any = {}): EscapadeClient<true> {
         if (!this.connected()) throw new Error('Socket is not connected!')
@@ -326,7 +405,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         const eventType: number = EscapadeClient.WorldEvents[message_type]
         const attrs = WorldEventMatch[message_type]
         const tmp = payload
-        
+
         payload = { eventType }
         if (attrs && attrs.length > 0) payload[attrs[0]] = tmp
 
@@ -339,6 +418,80 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         const data = Message.create(payload)
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
+
+        return this
+    }
+
+    /**
+     * Combine several events with one callback.
+     * @example
+     * ```ts
+     * client.onAll(['Add', 'OldAdd'], (player) => console.log(`${player.name} joined!`))
+     * ```
+     */
+
+    // Explanation of generic parameters:
+    // <K> - temporary generic parameter to store all events that
+    //       the client instance reacts to
+    // <A> - temporary generic parameter to label the events array
+    //       for example ['Add', 'Init'], this will be the event
+    //       names parameter
+    // <Args> - temporary generic parameter to label the arguments
+    //       intersection of the callback function
+    // <Z> - generic parameter
+    // Function signature: (eventNames: <A>, callback: (...Args) => void): this
+
+    public onAll<K extends (LibraryEvents & RawEvents), A extends (keyof K)[], Args extends K[A[number]], Z>(eventNames: A, listener: (...args: Args extends Array<Z> ? Args : never) => void): this {
+        eventNames.forEach(event => {
+            this.on(event, listener as any)
+        })
+        return this
+    }
+
+    /**
+     * Register a command with permission checking. If the command returns a string
+     * value it is privately messaged to the person who executed the command.
+     * @example
+     * ```ts
+     * client.onCommand('god_all', p => p.isAdmin, ([player, _, state]) => {
+     *     let s = state == 'true'
+     *     let l = client.players.forEach(q => q.god(s)).length
+     *     return s ? `${s ? 'Gave to' : 'Took from'} ${n} players god mode.`
+     * })
+     * ```
+     */
+    public onCommand(cmd: string, permission_check: (player: PlayerInfo) => boolean, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this
+
+    /**
+     * Register a (global use) command. If the command returns a string value it
+     * is privately messaged to the person who executed the command.
+     * @example
+     * ```ts
+     * client.onCommand('edit', ([player, _, state]) => {
+     *     let s = state == 'true'
+     *     player.edit(s)
+     * })
+     * ```
+     */
+    public onCommand(cmd: string, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this;
+
+    public onCommand(cmd: string, cb1: ((p: PlayerInfo) => boolean) | ((player: PlayerInfo, ...args: string[]) => (Promise<any> | any)), cb2?: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this {
+        if (cb2 == undefined)
+            return this.onCommand(cmd, () => true, cb1 as (player: PlayerInfo, ...args: string[]) => (Promise<any> | any))
+
+        this.#commands.push([
+            // The command is `cmd`
+            cmd,
+            // The permission callback is cb1
+            cb1 as (player: PlayerInfo) => boolean,
+            // This function is only executed when the permission callback was positive in the commands module.
+            async (player: PlayerInfo, ...args: string[]) => {
+                // if (!(cb1 as ((p: PlayerInfo) => boolean))(player)) return
+                const output = await cb2(player, ...args)
+                if (typeof output == 'string')
+                    this.pm(player, output)
+            }
+        ])
 
         return this
     }
@@ -361,45 +514,17 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
             return callback.module(this)
     }
 
-
-
-
-
-    // TODO <TODO>
-
-    async api<Profile>(method: 'GET', endpoint: 'me'): Promise<[200, Profile]>
-
-    async api(method: any, endpoint: any, data?: any): Promise<any>
-    
-    public async api<Data>(method: 'GET' | 'POST' | 'DELETE', endpoint: string, data?: any): Promise<[number, Data]> {
-        const response = await fetch(`${ESCAPADE_API}/${endpoint}`, {
-            method,
-            headers: {
-                Authorization: 'Bearer ' + this.#token
-            },
-            body: data !== undefined ? JSON.stringify(data) : null
-        })
-
-        if (response.status.toString().startsWith('2'))
-            return [response.status, await response.json()]
-
-        throw new Error('Status Error (' + response.status + '): ' + response.text())
-    }
-
-    // </TODO>
-
-
-
-
     /**
-     * @example
+     * @deprecated
      * 
      * Synchronize. You need to send this, if you want
      * to see the bot player in the world.
      * 
+     * @example
+     * 
      * ```ts
      * client.on('start', () => {
-     *     client.sync()
+     *     client.send('Sync')
      * })
      * ```
      */
@@ -424,18 +549,24 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
-     * @todo @example
+     * Send a private message to a user.
+     * 
+     * @deprecated
+     * 
+     * @example
      * 
      * ```ts
-     * client.pm(user, 'Hello, World!')
+     * client.pm(addArgs, 'Hello, World!')
      * ```
      */
-    public async pm(target: Player, message: string): Promise<true>
+    public async pm(target: PlayerInfo, message: string): Promise<true>
 
     /**
-     * @deprecated Not Yet Implemented
-     * @todo @example
+     * Send a private message to a user by name.
      * 
+     * @deprecated
+     * 
+     * @example
      * ```ts
      * client.pm('user', 'Hello, World!')
      * ```
@@ -443,21 +574,24 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     public async pm(target_username: string, message: string): Promise<true>
 
     /**
-     * @todo @example
+     * Send a private message to a user by id.
      * 
+     * @deprecated
+     * 
+     * @example
      * ```ts
      * client.pm(1, 'Hello, World!')
      * ```
      */
     public async pm(target_id: number, message: string): Promise<true>
 
-    public async pm(target: number | string | Player, message: string) {
+    public async pm(target: number | string | PlayerInfo, message: string) {
         if (typeof target == 'object')
-            target = (target as Player).localPlayerId
+            target = (target as PlayerInfo).localPlayerId ?? 0
         else if (typeof target == 'string') {
             const player = this.#players.find(p => p.name == target)
             if (!player) throw new Error(`Player ${target} not found of ${this.#players.map(({ name }) => name).join()}.`)
-            target = player.localPlayerId
+            target = player.localPlayerId ?? 0
         }
         if (!this.connected()) throw new Error('Client not connected.')
         this.send('Chat', { message, isPrivate: true, targetLocalPlayerId: target })

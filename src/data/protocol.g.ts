@@ -101,95 +101,95 @@ export interface JoinWorld {
 
 export type WorldEvent = {
 	initArgs: InitArgs
-	eventType: 0
+	eventType: WorldEventType.Init
 	issuerLocalPlayerId: number
 } | {
 	worldInfoArgs: WorldInfo
-	eventType: 10
+	eventType: WorldEventType.WorldInfoUpdate
 	issuerLocalPlayerId: number
 } | {
 	notificationArgs: NotificationArgs
-	eventType: 11
+	eventType: WorldEventType.Notification
 	issuerLocalPlayerId: number
 } | {
 	worldResetArgs: WorldResetArgs
-	eventType: 12
+	eventType: WorldEventType.WorldReset
 	issuerLocalPlayerId: number
 } | {
 	blockArgs: BlockArgs
-	eventType: 13
+	eventType: WorldEventType.Block
 	issuerLocalPlayerId: number
 } | {
 	addArgs: PlayerInfo
-	eventType: 20
+	eventType: WorldEventType.Add
 	issuerLocalPlayerId: number
 } | {
 	playerResetArgs: PlayerResetArgs
-	eventType: 22
+	eventType: WorldEventType.PlayerReset
 	issuerLocalPlayerId: number
 } | {
 	chatArgs: ChatArgs
-	eventType: 23
+	eventType: WorldEventType.Chat
 	issuerLocalPlayerId: number
 } | {
 	smileyChangeArgs: SmileyChangeArgs
-	eventType: 24
+	eventType: WorldEventType.SmileyChange
 	issuerLocalPlayerId: number
 } | {
 	auraChangeArgs: AuraChangeArgs
-	eventType: 25
+	eventType: WorldEventType.AuraChange
 	issuerLocalPlayerId: number
 } | {
 	canEditArgs: CanEditChangeArgs
-	eventType: 26
+	eventType: WorldEventType.CanEditChange
 	issuerLocalPlayerId: number
 } | {
 	canUseGodModeArgs: CanUseGodModeChangeArgs
-	eventType: 27
+	eventType: WorldEventType.CanUseGodModeChange
 	issuerLocalPlayerId: number
 } | {
 	moveArgs: MoveArgs
-	eventType: 40 | 41
+	eventType: WorldEventType.Move | WorldEventType.MoveUpdate
 	issuerLocalPlayerId: number
 } | {
 	deathArgs: DeathArgs
-	eventType: 42
+	eventType: WorldEventType.Death
 	issuerLocalPlayerId: number
 } | {
 	setRespawnPointArgs: Vector2U
-	eventType: 43
+	eventType: WorldEventType.SetRespawnPoint
 	issuerLocalPlayerId: number
 } | {
 	respawnArgs: RespawnArgs
-	eventType: 44
+	eventType: WorldEventType.Respawn
 	issuerLocalPlayerId: number
 } | {
 	blockTouchArgs: BlockTouchArgs
-	eventType: 50 | 51 | 52 | 55 | 58
+	eventType: WorldEventType.MapEnablerTouch | WorldEventType.GodModeEnablerTouch | WorldEventType.TrophyTouch | WorldEventType.CrownTouch | WorldEventType.CheckpointTouch
 	issuerLocalPlayerId: number
 } | {
 	coinCollectArgs: CoinCollectArgs
-	eventType: 53
+	eventType: WorldEventType.CoinCollect
 	issuerLocalPlayerId: number
 } | {
 	keyTouchArgs: KeyTouchArgs
-	eventType: 54
+	eventType: WorldEventType.KeyTouch
 	issuerLocalPlayerId: number
 } | {
 	switchTouchArgs: SwitchTouchArgs
-	eventType: 56 | 57
+	eventType: WorldEventType.PurpleSwitchTouch | WorldEventType.OrangeSwitchTouch
 	issuerLocalPlayerId: number
 } | {
 	effectTouchArgs: EffectTouchArgs
-	eventType: 59
+	eventType: WorldEventType.EffectTouch
 	issuerLocalPlayerId: number
 } | {
 	playerTouchArgs: PlayerTouchArgs
-	eventType: 60
+	eventType: WorldEventType.PlayerTouch
 	issuerLocalPlayerId: number
 } | {
 	teamChangeArgs: TeamChangeArgs
-	eventType: 61
+	eventType: WorldEventType.TeamChange
 	issuerLocalPlayerId: number
 } | {
 	issuerLocalPlayerId: number
