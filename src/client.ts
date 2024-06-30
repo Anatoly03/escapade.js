@@ -132,6 +132,29 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
+     * Retrieve a player object.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.player('user').pm('Hello!')
+     * ```
+     */
+    public player(this: EscapadeClient<true>, data: number | string | PlayerInfo): Player | undefined {
+        let playerInterface = this.players().find(p => {
+            if (typeof data == 'object')
+                return data.localPlayerId == p.localPlayerId
+            else if (typeof data == 'string')
+                return data == p.name
+            else if (typeof data == 'number')
+                return data == p.localPlayerId
+            return false
+        })
+        if (!playerInterface) return
+        return new Player(this, playerInterface)
+    }
+
+    /**
      * A reference of the self player object.
      * 
      * @example

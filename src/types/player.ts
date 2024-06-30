@@ -21,6 +21,19 @@ export class Player implements PlayerInfo {
         this.client = client
         Object.keys(from).forEach((k: any) => (this[k as keyof Player] as any) = from[k as keyof PlayerInfo])
     }
+
+    /**
+     * Send a private message to a user.
+     * 
+     * @example
+     * ```ts
+     * client.player('user').pm('Hello, World!')
+     * ```
+     */
+    public pm(message: string) {
+        this.client.send('Chat', { message, isPrivate: true, targetLocalPlayerId: this.localPlayerId })
+        return this
+    }
 }
 
 export class SelfPlayer extends Player {
