@@ -13,18 +13,19 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
     client.once('Init', ({ issuerLocalPlayerId, initArgs }) => {
         if (!client.connected()) throw new Error('Could not connect Player Manager.')
 
-        const self = set_self(new SelfPlayer(client, initArgs.me))
-        players.push(self)
+        const me = initArgs.me as PlayerInfo
+        const self = set_self(new SelfPlayer(client, me))
+        players.push(me)
 
         for (const player of initArgs.players ?? []) {
-            if (player.localPlayerId === self.localPlayerId) continue
+            if (player.localPlayerId === self.id) continue
             players.push(player)
         }
 
         // Helper Events
 
         for (const player of players) {
-            if (player.localPlayerId === self.localPlayerId) continue
+            if (player.localPlayerId === self.id) continue
             client.emit('OldAdd', {
                 issuerLocalPlayerId,
                 addArgs: player,

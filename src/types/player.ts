@@ -1,26 +1,37 @@
 
 import { EscapadeClient } from '../client.js'
-import { MoveArgs, PlayerInfo, PlayerState } from '../data/protocol.g.js'
+import { MoveArgs, PlayerInfo } from '../data/protocol.g.js'
 
-export class Player implements PlayerInfo {
+/**
+ * Wrapper class for `PlayerInfo`. 
+ */
+export class Player {
+    #reference: PlayerInfo
+
     protected client: EscapadeClient<true>
 
-    localPlayerId = 0
-    playerId = 'undeclared'
-    name : string | undefined
-    smileyId = 0
-    auraShapeId = 0
-    auraColorId = 0
-    isReady = false
-    lastPositionUpdate = 0
-    playState?: PlayerState
-    permLevel = 0 as 0
-    canEdit = false
-
-    constructor(client: EscapadeClient<true>, from: PlayerInfo = {}) {
+    /**
+     * @ignore
+     */
+    constructor(client: EscapadeClient<true>, from: PlayerInfo) {
         this.client = client
-        Object.keys(from).forEach((k: any) => (this[k as keyof Player] as any) = from[k as keyof PlayerInfo])
+        this.#reference = from
     }
+
+    /**
+     * Getter to retrieve player id from the referenced object.
+     */
+    get id () { return this.#reference.localPlayerId }
+
+    /**
+     * Getter to retrieve player id from the referenced object.
+     */
+    get name () { return this.#reference.name }
+
+    /**
+     * Getter to retrieve player info as object.
+     */
+    get info () { return this.#reference }
 
     /**
      * Send a private message to a user.
@@ -31,7 +42,7 @@ export class Player implements PlayerInfo {
      * ```
      */
     public pm(message: string) {
-        this.client.send('Chat', { message, isPrivate: true, targetLocalPlayerId: this.localPlayerId })
+        this.client.send('Chat', { message, isPrivate: true, targetLocalPlayerId: this.id })
         return this
     }
 }
@@ -66,10 +77,12 @@ export class SelfPlayer extends Player {
      */
     public set_god(isGod: boolean) {
         this.client.send('Move', this.args({ isGod }))
+        return this
     }
 
     public kill() {
         this.client.send('Death', { count: ++this.#deathCount })
         this.client.send('Respawn')
+        return this
     }
 }
