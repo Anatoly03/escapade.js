@@ -20,3 +20,7 @@ await client.connect('WORLD ID')
 ```
 npm i --save escapade.js
 ```
+
+## Contributing
+
+See Pull Request [#3](https://github.com/Anatoly03/escapade.js/pull/3) to contribute to the code base and Pull Request [#2](https://github.com/Anatoly03/escapade.js/pull/2) to contribute organizational/ other matters.
