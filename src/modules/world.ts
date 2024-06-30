@@ -22,20 +22,18 @@ export default (set_world: (world: World) => World) => (client: EscapadeClient) 
      * Set block
      */
     client.on('Block', ({ issuerLocalPlayerId, blockArgs }: any) => {
-        if (!client.connected()) throw new Error('Could not connect Player Manager.')
+        if (!client.connected()) throw new Error('Could not connect World Manager.')
 
-        const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId) as Player
+        // const player = client.players().find(p => p.localPlayerId == issuerLocalPlayerId) as Player
         
-        const block = new Block<true>(blockArgs)
-        const previous_block = client.world()
-            .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0]
+        // const block = new Block<true>(blockArgs)
+        // const previous_block = client.world()
+        //     .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0]
 
         client.world()
             .layer(blockArgs.layer)[blockArgs.x || 0][blockArgs.y || 0] = new Block(blockArgs)
 
-        if (block.equals(previous_block)) return
-
-        // client.emit('block', player, block)
+        // if (block.equals(previous_block)) return
     })
 
     return client

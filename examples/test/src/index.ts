@@ -8,7 +8,7 @@ const client = new EscapadeClient({ token: process.env.token } as any)
 client.once('Init', ({ initArgs }) => {
     if (!client.connected()) return
     client.sync()
-    client.say(`[BOT] Self is ${client.self().name} and id is ${client.self().localPlayerId}!`)
+    client.say(`[BOT] Self is ${client.self().name} and id is ${client.self().id}!`)
     console.log('Connected!')
     client.self().set_god(true)
 })
@@ -19,6 +19,30 @@ client.onCommand('kill', () => {
     if (!client.connected()) return
     client.self().kill()
     console.log('Death')
+})
+
+client.onCommand('replace', p => p.name == 'anatoly', (player, _, x, y) => {
+    if (!client.connected()) return
+
+    let ix = parseInt(x)
+    let iy = parseInt(y)
+
+    for (const block of client.world().blocks()) {
+        if (!block) {
+            continue
+        }
+        if (block.id == ix)
+            client.send('Block', {
+                x: block.x,
+                y: block.y,
+                layer: block.layer,
+                blockId: iy
+            })
+    }
+})
+
+client.on('Block', ({ blockArgs }) => {
+    console.log(blockArgs.blockId)
 })
 
 // client.on('Add', add => add.addArgs)

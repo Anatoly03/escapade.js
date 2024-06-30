@@ -5,6 +5,33 @@ import { EscapadeClient } from '../client.js'
 import { BlockEntry, WorldData, WorldInfo } from '../data/protocol.g.js'
 import { Block } from './block.js'
 
+/**
+ * A class to handle world information, especially focusing on block data.
+ * 
+ * @example
+ * 
+ * ```ts
+ * client.onCommand('replace', p => p.name == 'anatoly', (player, _, x, y) => {
+ *     if (!client.connected()) return
+ * 
+ *     let ix = parseInt(x)
+ *     let iy = parseInt(y)
+ * 
+ *     for (const block of client.world().blocks()) {
+ *         if (!block) {
+ *             continue
+ *         }
+ *         if (block.id == ix)
+ *             client.send('Block', {
+ *                 x: block.x,
+ *                 y: block.y,
+ *                 layer: block.layer,
+ *                 blockId: iy
+ *             })
+ *     }
+ * })
+ * ```
+ */
 export class World {
     public width: number
     public height: number
@@ -13,10 +40,11 @@ export class World {
         playerId: string
         name: string | undefined
     }
-    
+
+    #client: EscapadeClient<true>
     #data: Block<true>[][][]
 
-    constructor(from: WorldInfo, client: EscapadeClient) {
+    constructor(from: WorldInfo, client: EscapadeClient<true>) {
         this.width = from.width ?? 0
         this.height = from.height ?? 0
 
@@ -25,10 +53,12 @@ export class World {
             name: from.ownerName
         }
 
+        this.#client = client
+
         // Generate block matrix
-        
+
         this.#data = [[], []]
-        for (let layer = 0; layer < 2; layer ++) {
+        for (let layer = 0; layer < 2; layer++) {
             this.#data[layer] = new Array(this.width)
             for (let x = 0; x < this.width; x++) {
                 this.#data[layer][x] = new Array(this.height)
@@ -37,7 +67,62 @@ export class World {
 
         // Retrieve block data
 
-        const decompressed = fflate.inflateSync(from.deflatedWorldData as Uint8Array)
+        this.fromBuffer(from.deflatedWorldData as Uint8Array)
+    }
+
+    /**
+     * @todo
+     */
+    get foreground(): Block<true>[][] {
+        return this.#data[0]
+    }
+
+    /**
+     * @todo
+     */
+    get background(): Block<true>[][] {
+        return this.#data[1]
+    }
+
+    /**
+     * @todo
+     */
+    layer(v: 0 | 1): Block<true>[][] {
+        return this.#data[v]
+    }
+
+    /**
+     * Iterate over all blocks
+     */
+    public * blocks() {
+        for (let layer = 0; layer < this.#data.length; layer += 1)
+            for (let x = 0; x < this.#data[layer].length; x += 1)
+                for (let y = 0; y < this.#data[layer][x].length; y += 1)
+                    yield this.#data[layer][x][y]
+        return true
+    }
+
+    /**
+     * @todo
+     */
+    public load() {
+        this.#client.say('/reload')
+        return this
+    }
+
+    /**
+     * @todo
+     */
+    public save() {
+        this.#client.say('/save')
+        return this
+    }
+
+    /**
+     * @todo
+     */
+    public fromBuffer(deflatedWorldData: Uint8Array) {
+        const decompressed = fflate.inflateSync(deflatedWorldData)
         const world_data = EscapadeClient.protocol.lookupType('WorldData').decode(decompressed) as WorldData
         const blocks = world_data.blockEntries as BlockEntry[]
 
@@ -45,59 +130,19 @@ export class World {
             const xPos = new Uint16Array(entry.xs?.buffer.slice(entry.xs.byteOffset, entry.xs.byteOffset + entry.xs.length) as ArrayBufferLike)
             const yPos = new Uint16Array(entry.ys?.buffer.slice(entry.ys.byteOffset, entry.ys.byteOffset + entry.ys.length) as ArrayBufferLike)
             const id = entry.blockId ?? 0
-            
-            // this.data[b.layer ?? 0]
-            // console.log(entry.blockId, entry.intArgs, entry.stringArgs)
 
             for (let i = 0; i < Math.min(xPos.length, yPos.length); i++) {
                 this.#data[entry.layer ?? 0][xPos[i]][yPos[i]] = new Block({
                     x: xPos[i], y: yPos[i], id
                 })
             }
-
-            // console.log(b.xs)
-            // console.log(b.xs?.length)
-            // console.log(new Uint16Array(Buffer.from(b.xs?.buffer.slice(0, b.xs.length) as Uint8Array)))
-            // console.log(new Uint16Array(b.xs?.buffer as Uint8Array)?.BYTES_PER_ELEMENT)
-            // console.log(new Uint16Array(b.xs?.buffer as Uint8Array))
-            // console.log(b.ys)
         }
-
-        // console.log(world_data)
     }
 
     /**
-     * 
+     * @todo
      */
-    get foreground(): Block<true>[][] {
-        return this.#data[0]
-    }
-
-    /**
-     * 
-     */
-    get background(): Block<true>[][] {
-        return this.#data[1]
-    }
-
-    /**
-     * 
-     */
-    layer(v: 0 | 1): Block<true>[][] {
-        return this.#data[v]
-    }
-
-    /**
-     * 
-     */
-    public load(deflatedWorldData?: Uint8Array) {
-        // TODO
-    }
-
-    /**
-     * 
-     */
-    public save() {
-        // TODO
+    public toBuffer() {
+        return this
     }
 }
