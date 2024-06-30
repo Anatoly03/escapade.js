@@ -113,6 +113,13 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     }
 
     /**
+     * @deprecated All Events are now managed by the client. Remove all instances of `.raw()`
+     */
+    public raw() {
+        return this as EventEmitter<{ [key in keyof typeof WorldEventType]: [WorldEvent & { eventType: (typeof WorldEventType)[key] }] } & {'*': any[]}>
+    }
+
+    /**
      * @example
      * 
      * ```ts
