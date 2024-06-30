@@ -9,7 +9,7 @@ import { WorldEvent, WorldEventType, SendEventTypes, PlayerInfo } from './data/p
 
 import PlayerModule from './modules/players.js'
 import WorldModule from './modules/world.js'
-import ChatModule from './modules/chat.js'
+import CommandModule from './modules/commands.js'
 
 import { ProfileMeta, Profile, CampaignMeta, WorldMeta } from './types/api.js'
 import { Player, SelfPlayer } from './types/player.js'
@@ -34,13 +34,26 @@ type LibraryEvents = {
  * socket can send and receive events.
  */
 export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter< LibraryEvents & RawEvents > {
-// export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitter<RawEvents & LibraryEvents> {
     #socket: WebSocket | undefined
     #token: string
 
-    #players: Player[] = []
+    #players: PlayerInfo[] = []
     #self: Player | undefined
     #world: World | undefined
+
+    #commands: [string, (player: PlayerInfo) => boolean, (receive: PlayerInfo, ...args: string[]) => void][] = []
+
+    /**
+     * The command prefix array stores all the prefici the bot
+     * will react to. The prefici that are accepted by the client
+     * are tried in order from left to right, so if a prefix is a
+     * prefix of another prefix, it has to be put later. (For example,
+     * for command prefici `.` and `..`, `.` has to be placed later
+     * in the array.)
+     * 
+     * This array cannot be set to the empty array `[]`
+     */
+    public COMMAND_PREFIX: [string, ...string[]] = ['.', '!']
 
     /**
      * Create a new Escapade Client instance, by logging in with a token.
@@ -71,7 +84,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
 
         this.include(PlayerModule((value: SelfPlayer) => this.#self = value, this.#players))
         this.include(WorldModule((value: World) => this.#world = value))
-        this.include(ChatModule())
+        this.include(CommandModule(this.#commands))
     }
 
     /**
@@ -107,7 +120,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * console.log('Players In World: ', client.players().map({ name } => name).join())
      * ```
      */
-    public players(this: EscapadeClient<true>): Player[] {
+    public players(this: EscapadeClient<true>): PlayerInfo[] {
         return this.#players
     }
 
@@ -351,9 +364,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     /**
      * @todo
      */
-    // TODO add `this: EscapadeClient<true, true>, ` type guard in param
-    public send<EventName extends keyof SendEventTypes>
-        (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true>
+    public send<EventName extends keyof SendEventTypes> (message_type: EventName, args?: SendEventTypes[EventName]): EscapadeClient<true>
 
     public send(message_type: string, payload: any = {}): EscapadeClient<true> {
         if (!this.connected()) throw new Error('Socket is not connected!')
@@ -374,6 +385,54 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
         const data = Message.create(payload)
         const buffer = Message.encode(data).finish()
         this.socket().send(buffer)
+
+        return this
+    }
+
+    /**
+     * Register a command with permission checking. If the command returns a string
+     * value it is privately messaged to the person who executed the command.
+     * @example
+     * ```ts
+     * client.onCommand('god_all', p => p.isAdmin, ([player, _, state]) => {
+     *     let s = state == 'true'
+     *     let l = client.players.forEach(q => q.god(s)).length
+     *     return s ? `${s ? 'Gave to' : 'Took from'} ${n} players god mode.`
+     * })
+     * ```
+     */
+    public onCommand(cmd: string, permission_check: (player: Player) => boolean, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this
+
+    /**
+     * Register a (global use) command. If the command returns a string value it
+     * is privately messaged to the person who executed the command.
+     * @example
+     * ```ts
+     * client.onCommand('edit', ([player, _, state]) => {
+     *     let s = state == 'true'
+     *     player.edit(s)
+     * })
+     * ```
+     */
+    public onCommand(cmd: string, callback: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this;
+
+    public onCommand(cmd: string, cb1: ((p: PlayerInfo) => boolean) | ((player: PlayerInfo, ...args: string[]) => (Promise<any> | any)), cb2?: (player: PlayerInfo, ...args: string[]) => (Promise<any> | any)): this {
+        if (cb2 == undefined)
+            return this.onCommand(cmd, () => true, cb1 as (player: PlayerInfo, ...args: string[]) => (Promise<any> | any))
+
+        this.#commands.push([
+            // The command is `cmd`
+            cmd,
+            // The permission callback is cb1
+            cb1 as (player: PlayerInfo) => boolean,
+            // This function is only executed when the permission callback was positive in the commands module.
+            async (player: PlayerInfo, ...args: string[]) => {
+                // if (!(cb1 as ((p: PlayerInfo) => boolean))(player)) return
+                const output = await cb2(player, ...args)
+                if (typeof output == 'string')
+                    this.pm(player, output)
+            }
+        ])
 
         return this
     }
@@ -435,7 +494,7 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * client.pm(user, 'Hello, World!')
      * ```
      */
-    public async pm(target: Player, message: string): Promise<true>
+    public async pm(target: PlayerInfo, message: string): Promise<true>
 
     /**
      * @deprecated Not Yet Implemented
@@ -456,13 +515,13 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      */
     public async pm(target_id: number, message: string): Promise<true>
 
-    public async pm(target: number | string | Player, message: string) {
+    public async pm(target: number | string | PlayerInfo, message: string) {
         if (typeof target == 'object')
             target = (target as Player).localPlayerId
         else if (typeof target == 'string') {
             const player = this.#players.find(p => p.name == target)
             if (!player) throw new Error(`Player ${target} not found of ${this.#players.map(({ name }) => name).join()}.`)
-            target = player.localPlayerId
+            target = player.localPlayerId ?? 0
         }
         if (!this.connected()) throw new Error('Client not connected.')
         this.send('Chat', { message, isPrivate: true, targetLocalPlayerId: target })

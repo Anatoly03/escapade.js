@@ -1,10 +1,11 @@
 import { EscapadeClient } from "../client";
+import { PlayerInfo } from "../data/protocol.g";
 import { Player, SelfPlayer } from "../types/player.js";
 
 /**
  * @todo
  */
-export default (set_self: (self: SelfPlayer) => SelfPlayer, players: Player[]) => (client: EscapadeClient) => {
+export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[]) => (client: EscapadeClient) => {
 
     /**
      * Add initial player into the array reference
