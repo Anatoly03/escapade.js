@@ -6,8 +6,7 @@ import { MoveArgs, PlayerInfo } from '../data/protocol.g.js'
  * Wrapper class for `PlayerInfo`. 
  */
 export class Player {
-    #reference: PlayerInfo
-
+    protected reference: PlayerInfo
     protected client: EscapadeClient<true>
 
     /**
@@ -15,23 +14,23 @@ export class Player {
      */
     constructor(client: EscapadeClient<true>, from: PlayerInfo) {
         this.client = client
-        this.#reference = from
+        this.reference = from
     }
 
     /**
      * Getter to retrieve player id from the referenced object.
      */
-    get id () { return this.#reference.localPlayerId }
+    get id () { return this.reference.localPlayerId }
 
     /**
      * Getter to retrieve player id from the referenced object.
      */
-    get name () { return this.#reference.name }
+    get name () { return this.reference.name }
 
     /**
      * Getter to retrieve player info as object.
      */
-    info () { return this.#reference }
+    info () { return this.reference }
 
     /**
      * Send a private message to a user.
