@@ -1,6 +1,6 @@
 # Escapade.JS SDK
 
-[NPM](https://www.npmjs.com/package/escapade.js) | [GitHub](https://github.com/Anatoly03/escapade.js)
+[NPM](https://www.npmjs.com/package/escapade.js) | [GitHub](https://github.com/Anatoly03/escapade.js) | [Documentation](https://anatoly03.github.io/escapade.js/)
 
 #### Example
 
