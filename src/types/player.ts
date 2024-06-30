@@ -25,12 +25,29 @@ export class Player {
     /**
      * Getter to retrieve player id from the referenced object.
      */
-    get name () { return this.reference.name }
+    get name () { return this.reference.name?.toUpperCase() }
 
     /**
      * Getter to retrieve player info as object.
      */
     info () { return this.reference }
+
+    /**
+     * Set edit rights for a given user. `true` means, edit is granted.
+     * 
+     * @example
+     * 
+     * ```ts
+     * client.on('Add', ({ addArgs }) => {
+     *     client.player(addArgs).edit(true)
+     * })
+     * ```
+     */
+    public edit(state: boolean) {
+        if (this.reference.canEdit != state)
+            this.client.say(`/edit ${this.name}`)
+        return this
+    }
 
     /**
      * Send a private message to a user.

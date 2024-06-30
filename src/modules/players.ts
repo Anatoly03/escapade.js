@@ -46,12 +46,20 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
     })
 
     /**
+     * 
+     */
+    client.on('CanEditChange', ({ issuerLocalPlayerId, canEditArgs }) => {
+        const player = players.find(p => p.localPlayerId == issuerLocalPlayerId)
+        if (!player) return
+        player.canEdit = canEditArgs.canEdit ?? false
+    })
+
+    /**
      * Removes leaving player from the array reference
      */
     client.on('Leave', ({ issuerLocalPlayerId }: any) => {
         const index = players.findIndex(p => p.localPlayerId == issuerLocalPlayerId)
         if (index < 0) return
-        // client.emit('player:leave', players[index])
         players.splice(index, 1)
     })
 
