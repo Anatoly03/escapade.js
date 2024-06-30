@@ -31,7 +31,7 @@ export class Player {
     /**
      * Getter to retrieve player info as object.
      */
-    get info () { return this.#reference }
+    info () { return this.#reference }
 
     /**
      * Send a private message to a user.
