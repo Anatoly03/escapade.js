@@ -1,6 +1,6 @@
 import { EscapadeClient } from "../client";
 import { PlayerInfo, WorldEventType } from "../data/protocol.g.js";
-import { Player, SelfPlayer } from "../types/player.js";
+import { SelfPlayer } from "../types/player.js";
 
 /**
  * @todo
@@ -18,8 +18,10 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
 
         for (const player of initArgs.players ?? []) {
             if (player.localPlayerId === self.localPlayerId) continue
-            players.push(new Player (client, player))
+            players.push(player)
         }
+
+        // Helper Events
 
         for (const player of players) {
             if (player.localPlayerId === self.localPlayerId) continue
@@ -37,9 +39,8 @@ export default (set_self: (self: SelfPlayer) => SelfPlayer, players: PlayerInfo[
     client.on('Add', ({ addArgs }: any) => {
         if (!client.connected()) return
         if (players.some(p => p.localPlayerId == addArgs.localPlayerId)) return // Player already exists
-        const player = new Player (addArgs)
-        players.push(player)
-        if (player.localPlayerId === client.self().localPlayerId) return
+        players.push(addArgs)
+        // if (addArgs.localPlayerId === client.self().localPlayerId) return
         // client.emit('player:join', player, true)
     })
 

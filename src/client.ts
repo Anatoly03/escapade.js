@@ -364,8 +364,11 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
      * Disconnects the client, and if in the world, leave.
      */
     disconnect(): void {
-        this.send('Leave')
-        this.#socket?.close()
+        try {
+            this.send('Leave')
+        } finally {
+            this.#socket?.close()
+        }
     }
 
     /**
@@ -523,18 +526,22 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     /**
      * Send a private message to a user.
      * 
+     * @deprecated
+     * 
      * @example
      * 
      * ```ts
-     * client.pm(user, 'Hello, World!')
+     * client.pm(addArgs, 'Hello, World!')
      * ```
      */
     public async pm(target: PlayerInfo, message: string): Promise<true>
 
     /**
-     * @deprecated Not Yet Implemented
-     * @todo @example
+     * Send a private message to a user by name.
      * 
+     * @deprecated
+     * 
+     * @example
      * ```ts
      * client.pm('user', 'Hello, World!')
      * ```
@@ -542,8 +549,11 @@ export class EscapadeClient<Ready extends boolean = boolean> extends EventEmitte
     public async pm(target_username: string, message: string): Promise<true>
 
     /**
-     * @todo @example
+     * Send a private message to a user by id.
      * 
+     * @deprecated
+     * 
+     * @example
      * ```ts
      * client.pm(1, 'Hello, World!')
      * ```
